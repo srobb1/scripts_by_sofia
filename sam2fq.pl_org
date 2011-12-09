@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+use strict;
+use File::Spec;
+
+my $dir = shift;
+my $dir_path = File::Spec->rel2abs($dir);
+my $current     = File::Spec->curdir();
+my $current_dir = File::Spec->rel2abs($current);
+
+
+opendir( DIR, $dir_path ) || die "$!";
+foreach my $file ( readdir(DIR) ) {
+    if ($file =~ /^(\S+)\.sam$/){
+    	my $filebase = $1;
+     	if ( $filebase =~ /unPaired/ ) {
+`java -jar /home_stajichlab/robb/stajichlab-shared/pkg/Picard/picard/SamToFastq.jar INPUT=$dir_path/$file FASTQ=$dir_path/$filebase.fq VALIDATION_STRINGENCY=LENIENT`;
+        }
+        else {
+my $java = "java -jar /home_stajichlab/robb/stajichlab-shared/pkg/Picard/picard/SamToFastq.jar INPUT=$dir_path/$file FASTQ=$dir_path/$filebase"
+              . "_1.fq SECOND_END_FASTQ=$dir_path/$filebase"
+              . "_2.fq VALIDATION_STRINGENCY=LENIENT\n";
+	`$java`;
+        }	
+	
+    }
+}
+
