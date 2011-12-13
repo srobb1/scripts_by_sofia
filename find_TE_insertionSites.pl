@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 use File::Spec;
 use Getopt::Long;
+use Cwd;
 use strict;
 if ( !defined @ARGV ) {
     &getHelp();
@@ -16,11 +17,11 @@ my $exper              = 'not.given';
 my $mate_file_1        = '_1.';
 my $mate_file_2        = '_2.';
 my $mate_file_unpaired = '_unPaired.';
-my $current            = File::Spec->curdir();
+my $outdir;
 
 GetOptions(
     'e|exper:s'       => \$exper,
-    'c|current:s'     => \$current,
+    'c|outdir:s'      => \$outdir,
     'd|fq_dir:s'      => \$fq_dir,
     'g|genomeFasta:s' => \$genomeFasta,
     't|te_fasta:s'    => \$te_fasta,
@@ -31,9 +32,15 @@ GetOptions(
     'u|unpaired_id:s' => \$mate_file_unpaired,
     'h|help'          => \&getHelp,
 );
+my $current_dir;
 
-my $current_dir = File::Spec->rel2abs($current);
-my $mapping     = 1;
+if ( defined $outdir and -d $outdir ) {
+    $current_dir = File::Spec->rel2abs($outdir);
+}
+else {
+    $current_dir = cwd();
+}
+my $mapping = 1;
 if ( !defined $genomeFasta ) {
     print "\n\nPlease provide reference genome by using -g Genome fasta path\n";
     &getHelp();
@@ -118,8 +125,7 @@ elsif ( !-d $fq_dir ) {
 else {
 
     my $fq_path = File::Spec->rel2abs($fq_dir);
-    print "fq_path: $fq_path\n";
-    
+
     @fq_files = <$fq_path/*fq>;
     my @fastq_files = <$fq_path/*fastq>;
 
@@ -149,14 +155,14 @@ else {
 sub getHelp {
     print "
 usage:
-./find_TE_insertionSites.pl [-t TE_fasta_file][-g chromosome_genome_fasta][-d dir_of_fq][-m mismatch_allowance][-h] 
+./find_TE_insertionSites.pl [-e short_sample_name][-o outdir][-t TE_fasta_file][-g chromosome_genome_fasta][-d dir_of_fq][-m mismatch_allowance][-h] 
 
 options:
 -g STR          single chromosome genome fasta file path [no default]
--c STR          current directory, full path 
+-o STR          output directory, full path [cwd] 
 -e STR          Short Sample name (ex. A123) [not.given]
 -t STR          fasta containing 1 or more nucleotide sequences of transposable elements with TSD in the desc [no default]
--d STR          directory of paired fastq files (paired _1.fq & _2.fq) (.fq or .fastq is acceptable)  [no default]
+-d STR          directory of paired and unpaired fastq files (paired _1.fq & _2.fq) (.fq or .fastq is acceptable)  [no default]
 -l INT          len cutoff for the te trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (int, ex 0.1) [0] 
 -1 STR		string to identify mate 1 paired files [_1.]
@@ -197,39 +203,41 @@ my @fa;
 
 #foreach my $ref_fq_files ( keys %fq_files ) {
 
-    foreach my $fq ( @fq_files ) {
+foreach my $fq (@fq_files) {
+
     #foreach my $fq ( @{ $fq_files{$ref_fq_files} } ) {
-        my $fq_path = File::Spec->rel2abs($fq);
-        push @fq, $fq_path;
-        my $fa = $fq;
-        if ( $fa =~ s/\.(fq|fastq)$/.fa/ ) {
-            push @fa, $fa;
-            if ( !-e $fa ) {
-                open INFQ,  $fq_path or die $!;
-                open OUTFA, ">$fa"   or die $!;
+    my $fq_path = File::Spec->rel2abs($fq);
+    push @fq, $fq_path;
+    my $fa = $fq;
+    if ( $fa =~ s/\.(fq|fastq)$/.fa/ ) {
+        push @fa, $fa;
+        if ( !-e $fa ) {
+            open INFQ,  $fq_path or die $!;
+            open OUTFA, ">$fa"   or die $!;
 
-                #print "converting fq to fa $fq -> $fa\n";
-                while ( my $header = <INFQ> ) {
-                    my $seq         = <INFQ>;
-                    my $qual_header = <INFQ>;
-                    my $qual        = <INFQ>;
+            #print "converting fq to fa $fq -> $fa\n";
+            while ( my $header = <INFQ> ) {
+                my $seq         = <INFQ>;
+                my $qual_header = <INFQ>;
+                my $qual        = <INFQ>;
 
-                    die "ERROR: expected \'\@\' but saw $header"
-                      if substr( $header, 0, 1 ) ne '@';
+                die "ERROR: expected \'\@\' but saw $header"
+                  if substr( $header, 0, 1 ) ne '@';
 
-                    print OUTFA ">", substr( $header, 1 );
-                    print OUTFA $seq;
-                }
-                close INFQ;
-                close OUTFA;
+                print OUTFA ">", substr( $header, 1 );
+                print OUTFA $seq;
             }
-        }
-        else {
-            print
-"$fq does not seem to be a fastq based on the file extension. It should be fq or fastq\n";
-            &getHelp();
+            close INFQ;
+            close OUTFA;
         }
     }
+    else {
+        print
+"$fq does not seem to be a fastq based on the file extension. It should be fq or fastq\n";
+        &getHelp();
+    }
+}
+
 #}
 
 #split TE fasta into single record fastas
@@ -315,39 +323,40 @@ foreach my $te_path (@te_fastas) {
 ##insert mate finder here
 
     my %flanking_fq;
-    my @files_1        = <$path/*$mate_file_1*flankingReads.fq>;
-print "--test--@files_1\n";
+    my @files_1 = <$path/*$mate_file_1*flankingReads.fq>;
     my @files_2        = <$path/*$mate_file_2*flankingReads.fq>;
     my @files_unpaired = <$path/*$mate_file_unpaired*flankingReads.fq>;
-    if (!@files_1 and !@files_2 and !@files_unpaired){
-      for ( my $i = 0 ; $i < @files_1 ; $i++ ) {
-          my $file_1 = $files_1[$i];
-          $file_1 =~ s/$mate_file_1//;
-          for ( my $j = 0 ; $j < @files_2 ; $j++ ) {
-              my $file_2 = $files_2[$j];
-              $file_2 =~ s/$mate_file_2//;
-              if ( $file_1 eq $file_2 ) {
-                  $flanking_fq{$file_1}{1} = $files_1[$i];
-                  $flanking_fq{$file_1}{2} = $files_2[$j];
-                  if (@files_unpaired) {
-                      for ( my $k = 0 ; $k < @files_unpaired ; $k++ ) {
-                          my $file_unpaired = $files_unpaired[$k];
-                          if ( $file_1 eq $file_unpaired ) {
-                              $flanking_fq{$file_1}{unpaired} =
-                                $files_unpaired[$k];
-                              last;
-                          }
-                      }
-                  }
-                  last; #if $file_1 eq $file_2 and we are finished with unpaired go back to $i loop
-              }
-          }
-      }
-    }else {##if only unmatches files are provided
-      my @files_singles = <$path/*flankingReads.fq>;
-      foreach my $file (sort @files_singles){
-        $flanking_fq{$file}{unpaired}= $file;	
-      }
+    if ( !@files_1 and !@files_2 and !@files_unpaired ) {
+        for ( my $i = 0 ; $i < @files_1 ; $i++ ) {
+            my $file_1 = $files_1[$i];
+            $file_1 =~ s/$mate_file_1//;
+            for ( my $j = 0 ; $j < @files_2 ; $j++ ) {
+                my $file_2 = $files_2[$j];
+                $file_2 =~ s/$mate_file_2//;
+                if ( $file_1 eq $file_2 ) {
+                    $flanking_fq{$file_1}{1} = $files_1[$i];
+                    $flanking_fq{$file_1}{2} = $files_2[$j];
+                    if (@files_unpaired) {
+                        for ( my $k = 0 ; $k < @files_unpaired ; $k++ ) {
+                            my $file_unpaired = $files_unpaired[$k];
+                            if ( $file_1 eq $file_unpaired ) {
+                                $flanking_fq{$file_1}{unpaired} =
+                                  $files_unpaired[$k];
+                                last;
+                            }
+                        }
+                    }
+                    last
+                      ; #if $file_1 eq $file_2 and we are finished with unpaired go back to $i loop
+                }
+            }
+        }
+    }
+    else {              ##if only unmatches files are provided
+        my @files_singles = <$path/*flankingReads.fq>;
+        foreach my $file ( sort @files_singles ) {
+            $flanking_fq{$file}{unpaired} = $file;
+        }
     }
 
     my @bowtie_out_files;
@@ -364,7 +373,7 @@ print "--test--@files_1\n";
 `bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $flanking_fq  > $path/$target.$fq_name.bowtie.single.out `;
                 push @bowtie_out_files,
                   "$path/$target.$fq_name.bowtie.single.out";
-            }
+            }    #end of foreach my $type ( sort keys %{ $flanking_fq{$key} } )
             if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2} )
             {
                 my $flanking_fq_1 = $flanking_fq{$key}{1};
@@ -372,12 +381,11 @@ print "--test--@files_1\n";
                 my @fq_path       = split '/', $flanking_fq_1;
                 my $fq_name       = pop @fq_path;
                 $fq_name =~ s/\.fq$//;
-
                 if ( -s $flanking_fq_1 and -s $flanking_fq_2 ) {
 
                     #clean reads if both flanking.fq are non-zero file size
 `~/bin/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq`;
-                }
+                }    #end of if ( -s $flanking_fq_1 and -s $flanking_fq_2 )
                 if (    -s "$flanking_fq_1.matched"
                     and -s "$flanking_fq_2.matched" )
                 {
@@ -387,8 +395,8 @@ print "--test--@files_1\n";
 `bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
                     push @bowtie_out_files,
                       "$path/$target.$fq_name.bowtie.unPaired.out";
-                }
-            }    #end of if {1} and {2} exists
+                } # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
+            } #end of if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2})
         }    #end of foreach $key
         foreach my $bowtie_out (@bowtie_out_files) {
 
@@ -405,8 +413,8 @@ print "--test--@files_1\n";
                 #index bam
                 `samtools index $bowtie_out.sorted.bam`;
                 push @files2merge, "$bowtie_out.sorted.bam";
-            }
-        }    #end of foreach loop
+            }    #end of if ( -s $bowtie_out )
+        }    #end of foreach my $bowtie_out (@bowtie_out_files)
         my $files2merge = join " ", @files2merge;
 
         #merge paired and unPaired bam
@@ -416,41 +424,53 @@ print "--test--@files_1\n";
 
         #identify mping insertion sites
 `~/bin/get_TE_insertion_site.pl $path/$target.$TE.merged.sorted.bam $target $genome_path $TE $TSD{$TE} $exper`;
+    }    #end of if mapping
+}    #end of foreach TE fasta
 
-        print
-          "\n####################\n#\n# output files:\n#\n####################
-$target.$TE.te_insertion_sites.gff
- gff3 containing information about $TE insertions. 
+print "\n####################\n#\n# output files:\n#\n####################\n";
+my @outdirs = `ls -d $outdir/*search`;
+foreach my $out ( sort @outdirs ) {
+    my @files = `ls $out/*gff`;
+    push @files, `ls $out/*txt`;
+    push @files, `ls $out/*list`;
+    print "#####Summary Files#####\n" if scalar @files > 0;
+    foreach my $file (sort @files) {
+        print "$file\n";
+    }
+}
+print "\n#####File Descriptions#####\n";
+if ($mapping) {
+    print "*.te_insertion_sites.gff
+ gff3 containing information about TE insertions. 
  These sites are supported by alignment of reads to both 5' and 3'
  flanking genomic sequence
         
-$target.$TE.te_insertion_sites.table.txt
- contains the same information about $TE insertions as in the gff, 
+*.te_insertion_sites.table.txt
+ contains the same information about TE insertions as in the gff, 
  but in tab separtated table format.
 
-$target.$TE.te_insertion_sites.fa
+*.te_insertion_sites.fa
  fasta containing reference genome sequence flanking the insertion site, 
  100bp-5' 100bp-3' = 100bp total for each insertion
 
-$target.$TE.te_insertion_sites.reads.list
- contains the names of reads that overlap the 5' and 3' end of $TE for 
+*.te_insertion_sites.reads.list
+ contains the names of reads that overlap the 5' and 3' end of TE for 
  each individual mping insertion
 
-$target.$TE.te_insertion.all.txt
+*.te_insertion.all.txt
  contains all possible insertion sites identified including those that
- were identified with only 5' or 3' $TE flanking sequence.
+ were identified with only 5' or 3' TE flanking sequence.
 
-fasta_name[_1|_2].te_$TE.[five|three]_prime.fa
- contains the sequence matching to only $TE in each read that overlaps the
+*[_1|_2].te_TE.[five|three]_prime.fa
+ contains the sequence matching to only TE in each read that overlaps the
  start and end of mping
 
-fasta_name.te_$TE.flankingReads[_1|_2].fq
- contains the sequence of the reads that match $TE with the $TE portion
+*.te_TE.flankingReads[_1|_2].fq
+ contains the sequence of the reads that match TE with the TE portion
  of the read removed\n";
-    }
-    print
-      "\n####################\n#\n# output files:\n#\n####################\n"
-      if !$mapping;
-    print "fasta_name.te_$TE.ContainingReads.fq
- contains any sequence that was found to match $TE with blat\n";
+}    #end of if mapping
+else {
+    print "*.te_TE.ContainingReads.fq
+ contains any sequence that was found to match TE with blat\n";
 }
+
