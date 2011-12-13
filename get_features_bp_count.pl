@@ -3,10 +3,11 @@ use strict;
 use Bio::DB::SeqFeature::Store;
 use Data::Dumper;
 use List::Util qw(first max maxstr min minstr reduce shuffle sum);
+use File::Spec;
 ## sqlite data file path
 ## ex:/home_stajichlab/robb/rice/database/MSUr7.mping.insertions.sqlite
 my $sqlite = shift; 
-
+$sqlite = File::Spec->rel2abs($sqlite);
 
 # Open the sequence database
 my $db = Bio::DB::SeqFeature::Store->new(-adaptor => 'DBI::SQLite',

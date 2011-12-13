@@ -3,10 +3,15 @@ use strict;
 use Bio::DB::SeqFeature::Store;
 use Data::Dumper;
 use Statistics::Descriptive;  
+use File::Spec;
+
+my $sqlite = shift;
+die "Please provide a SQLite datafile of a seqfeature db" if !defined $sqlite;
+$sqlite = File::Spec->rel2abs($sqlite);
+
 # Open the sequence database
   my $db = Bio::DB::SeqFeature::Store->new(-adaptor => 'DBI::SQLite',
-                                           #-dsn     => '/home_stajichlab/robb/rice/database/MSUr7.mping.insertions.sqlite');
-                                           -dsn     => '/home_stajichlab/robb/rice/database/MSUr7.mping.insertions.500bp_3kb_filtered.sqlite');
+                                           -dsn     => $sqlite);
 
 # queries DB for all features of type 'transposable_element_insertion_site'
 # transposable_element_attribute'

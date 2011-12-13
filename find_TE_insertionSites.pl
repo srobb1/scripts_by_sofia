@@ -21,7 +21,7 @@ my $outdir;
 
 GetOptions(
     'e|exper:s'       => \$exper,
-    'c|outdir:s'      => \$outdir,
+    'o|outdir:s'      => \$outdir,
     'd|fq_dir:s'      => \$fq_dir,
     'g|genomeFasta:s' => \$genomeFasta,
     't|te_fasta:s'    => \$te_fasta,
@@ -93,7 +93,6 @@ else {
 "\n\nOnly the first sequence, $target, will be used to map TE insertions\n\n";
         $genomeFasta = "$current_dir/$target.fa";
     }
-
 }
 if ( !defined $te_fasta ) {
     print
@@ -123,46 +122,33 @@ elsif ( !-d $fq_dir ) {
     &getHelp();
 }
 else {
-
     my $fq_path = File::Spec->rel2abs($fq_dir);
-
     @fq_files = <$fq_path/*fq>;
     my @fastq_files = <$fq_path/*fastq>;
-
     push @fq_files, @fastq_files;
     if ( scalar @fq_files == 0 ) {
         print "Must provide at least 1 short read file\n";
         &getHelp();
     }
-
- #    foreach my $fq_full ( sort @fq_files ) {
- #        my @filefull = split '/', $fq_full;
- #        my $fq = $filefull[-1];
- #        if ( $fq =~ /\/?(\S+?)[_.][12]|(unpaired)?\.\S*(fq|fasta)$/i ) {
- #            push @{ $fq_files{$1} }, $fq_full;
- #            print "adding $fq to list to be considered for processing\n";
- #        }
- #        else {
- #            print
- #"fastq files do not seem to be mate pairs (_1.fq or _2.fq or _unpaired.fq)\n";
- #            print " ->$fq\n";
- #
- #            #push @{$fq_files{'no_mate'}} , $fq;
- #        }
- #    }
 }
 
 sub getHelp {
     print "
 usage:
-./find_TE_insertionSites.pl [-e short_sample_name][-o outdir][-t TE_fasta_file][-g chromosome_genome_fasta][-d dir_of_fq][-m mismatch_allowance][-h] 
+./find_TE_insertionSites.pl [-t TE_fasta_file][-g chromosome_genome_fasta][-d dir_of_fq][-e short_sample_name][-h] 
 
 options:
+
+**required:
 -g STR          single chromosome genome fasta file path [no default]
--o STR          output directory, full path [cwd] 
--e STR          Short Sample name (ex. A123) [not.given]
 -t STR          fasta containing 1 or more nucleotide sequences of transposable elements with TSD in the desc [no default]
 -d STR          directory of paired and unpaired fastq files (paired _1.fq & _2.fq) (.fq or .fastq is acceptable)  [no default]
+
+**recommended:
+-e STR          Short Sample name, will be used in the output files to create IDs for the insert (ex. A123) [not.given]
+
+**optional:
+-o STR          output directory, needs to exist, will not create, full path [cwd] 
 -l INT          len cutoff for the te trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (int, ex 0.1) [0] 
 -1 STR		string to identify mate 1 paired files [_1.]
@@ -427,18 +413,19 @@ foreach my $te_path (@te_fastas) {
     }    #end of if mapping
 }    #end of foreach TE fasta
 
-print "\n####################\n#\n# output files:\n#\n####################\n";
-my @outdirs = `ls -d $outdir/*search`;
+print "\n####################\n#\n# output files:\n#\n####################\n\n";
+my @outdirs = `ls $outdir/$top_dir`;
 foreach my $out ( sort @outdirs ) {
-    my @files = `ls $out/*gff`;
-    push @files, `ls $out/*txt`;
-    push @files, `ls $out/*list`;
-    print "#####Summary Files#####\n" if scalar @files > 0;
+    my @files = `ls $outdir/$top_dir/$out/*gff`;
+    push @files, `ls $outdir/$top_dir/$out/*txt`;
+    push @files, `ls $outdir/$top_dir/$out/*list`;
+    print "##### Summary Files #####\n" if scalar @files > 0;
+    print "\t## found in $outdir/$top_dir/$out ##\n";
     foreach my $file (sort @files) {
         print "$file\n";
     }
 }
-print "\n#####File Descriptions#####\n";
+print "\n##### All File Descriptions #####\n";
 if ($mapping) {
     print "*.te_insertion_sites.gff
  gff3 containing information about TE insertions. 
