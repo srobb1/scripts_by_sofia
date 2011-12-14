@@ -1,12 +1,17 @@
 #!/usr/bin/perl -w
 use File::Spec;
 use Getopt::Long;
+use Data::Dumper;
 use Cwd;
 use strict;
+
+##change $scripts to location of find_TE scripts
+my $scripts = '~/bin';
+
+
 if ( !defined @ARGV ) {
     &getHelp();
 }
-
 my $genomeFasta = 'NONE';
 my $te_fasta;
 my $target             = 'NONE';
@@ -16,7 +21,7 @@ my $fq_dir;
 my $exper              = 'not.given';
 my $mate_file_1        = '_1.';
 my $mate_file_2        = '_2.';
-my $mate_file_unpaired = '_unPaired.';
+my $mate_file_unpaired = '.unPaired.';
 my $outdir;
 
 GetOptions(
@@ -36,6 +41,7 @@ my $current_dir;
 
 if ( defined $outdir and -d $outdir ) {
     $current_dir = File::Spec->rel2abs($outdir);
+    $current_dir =~ s/\/$//;
 }
 else {
     $current_dir = cwd();
@@ -148,7 +154,7 @@ options:
 -e STR          Short Sample name, will be used in the output files to create IDs for the insert (ex. A123) [not.given]
 
 **optional:
--o STR          output directory, needs to exist, will not create, full path [cwd] 
+-o STR          base output directory, needs to exist, will not create, full path [cwd] 
 -l INT          len cutoff for the te trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (int, ex 0.1) [0] 
 -1 STR		string to identify mate 1 paired files [_1.]
@@ -223,8 +229,6 @@ foreach my $fq (@fq_files) {
         &getHelp();
     }
 }
-
-#}
 
 #split TE fasta into single record fastas
 my $num = 0;
@@ -303,50 +307,62 @@ foreach my $te_path (@te_fastas) {
         if ( -e $te_Containing_fq ) {
             $fq = $te_Containing_fq;
         }
-`perl ~/bin/get_fq_of_te_trimmed_te_matching_reads.pl $path/$fa_name.te_$TE.blatout $fq $len_cutoff $mismatch_allowance > $path/$fa_name.te_$TE.flankingReads.fq `;
+`perl $scripts/get_fq_of_te_trimmed_te_matching_reads.pl $path/$fa_name.te_$TE.blatout $fq $len_cutoff $mismatch_allowance > $path/$fa_name.te_$TE.flankingReads.fq `;
     }
 
 ##insert mate finder here
 
     my %flanking_fq;
-    my @files_1 = <$path/*$mate_file_1*flankingReads.fq>;
-    my @files_2        = <$path/*$mate_file_2*flankingReads.fq>;
+    my @files_1;
+    while (my $file = <$path/*$mate_file_1*flankingReads.fq>){
+        push (@files_1, $file) if $file !~ /$mate_file_unpaired/;
+    }
+    my @files_2;
+    while (my $file = <$path/*$mate_file_2*flankingReads.fq>){
+        push (@files_2, $file) if $file !~ /$mate_file_unpaired/;
+    }
+
     my @files_unpaired = <$path/*$mate_file_unpaired*flankingReads.fq>;
-    if ( !@files_1 and !@files_2 and !@files_unpaired ) {
-        for ( my $i = 0 ; $i < @files_1 ; $i++ ) {
-            my $file_1 = $files_1[$i];
-            $file_1 =~ s/$mate_file_1//;
-            for ( my $j = 0 ; $j < @files_2 ; $j++ ) {
-                my $file_2 = $files_2[$j];
-                $file_2 =~ s/$mate_file_2//;
-                if ( $file_1 eq $file_2 ) {
-                    $flanking_fq{$file_1}{1} = $files_1[$i];
-                    $flanking_fq{$file_1}{2} = $files_2[$j];
-                    if (@files_unpaired) {
-                        for ( my $k = 0 ; $k < @files_unpaired ; $k++ ) {
-                            my $file_unpaired = $files_unpaired[$k];
-                            if ( $file_1 eq $file_unpaired ) {
-                                $flanking_fq{$file_1}{unpaired} =
-                                  $files_unpaired[$k];
-                                last;
-                            }
-                        }
+
+    if ( @files_1 and @files_2 ) {
+      for ( my $i = 0 ; $i < @files_1 ; $i++ ) {
+        my $file_1 = $files_1[$i];
+        $file_1 =~ s/$mate_file_1//;
+        for ( my $j = 0 ; $j < @files_2 ; $j++ ) {
+          my $file_2 = $files_2[$j];
+          $file_2 =~ s/$mate_file_2//;
+          if ( $file_1 eq $file_2 ) {
+            $flanking_fq{$file_1}{1} = $files_1[$i];
+            $flanking_fq{$file_1}{2} = $files_2[$j];
+            if (@files_unpaired) {
+                for ( my $k = 0 ; $k < @files_unpaired ; $k++ ) {
+                    my $file_unpaired = $files_unpaired[$k];
+                    if ( $file_1 eq $file_unpaired ) {
+                        $flanking_fq{$file_1}{unpaired} =
+                          $files_unpaired[$k];
+                        last;
                     }
-                    last
-                      ; #if $file_1 eq $file_2 and we are finished with unpaired go back to $i loop
                 }
             }
-        }
+            last
+              ; #if $file_1 eq $file_2 and we are finished with unpaired go back to $i loop
+          }
+       }
     }
-    else {              ##if only unmatches files are provided
-        my @files_singles = <$path/*flankingReads.fq>;
-        foreach my $file ( sort @files_singles ) {
-            $flanking_fq{$file}{unpaired} = $file;
-        }
+  }
+  else {              ##if only unmatched files are provided
+    my @files_singles = <$path/*flankingReads.fq>;
+    foreach my $file ( sort @files_singles ) {
+      $flanking_fq{$file}{unpaired} = $file;
     }
+  }
 
     my @bowtie_out_files;
     my @files2merge;
+
+    print Dumper \%flanking_fq;
+    print "\n";
+
     if ($mapping) {
         foreach my $key ( sort keys %flanking_fq ) {
             foreach my $type ( sort keys %{ $flanking_fq{$key} } ) {
@@ -356,7 +372,7 @@ foreach my $te_path (@te_fastas) {
                 my @fq_path = split '/', $flanking_fq;
                 my $fq_name = pop @fq_path;
                 $fq_name =~ s/\.fq$//;
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $flanking_fq  > $path/$target.$fq_name.bowtie.single.out `;
+`bowtie --best -S -q $genome_dir/$genome_file.bowtie_build_index $flanking_fq  > $path/$target.$fq_name.bowtie.single.out `;
                 push @bowtie_out_files,
                   "$path/$target.$fq_name.bowtie.single.out";
             }    #end of foreach my $type ( sort keys %{ $flanking_fq{$key} } )
@@ -364,21 +380,23 @@ foreach my $te_path (@te_fastas) {
             {
                 my $flanking_fq_1 = $flanking_fq{$key}{1};
                 my $flanking_fq_2 = $flanking_fq{$key}{2};
+		print "flankers: $flanking_fq_1 & $flanking_fq_2\n";
                 my @fq_path       = split '/', $flanking_fq_1;
                 my $fq_name       = pop @fq_path;
                 $fq_name =~ s/\.fq$//;
                 if ( -s $flanking_fq_1 and -s $flanking_fq_2 ) {
 
                     #clean reads if both flanking.fq are non-zero file size
-`~/bin/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq`;
+print "$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq\n";
+`$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq`;
                 }    #end of if ( -s $flanking_fq_1 and -s $flanking_fq_2 )
                 if (    -s "$flanking_fq_1.matched"
                     and -s "$flanking_fq_2.matched" )
                 {
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched > $path/$target.$fq_name.bowtie.mates.out`;
+`bowtie --best -S -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched > $path/$target.$fq_name.bowtie.mates.out`;
                     push @bowtie_out_files,
                       "$path/$target.$fq_name.bowtie.mates.out";
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
+`bowtie --best -S -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
                     push @bowtie_out_files,
                       "$path/$target.$fq_name.bowtie.unPaired.out";
                 } # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
@@ -386,8 +404,9 @@ foreach my $te_path (@te_fastas) {
         }    #end of foreach $key
         foreach my $bowtie_out (@bowtie_out_files) {
 
-            #covert bowtie output to sam
             if ( -s $bowtie_out ) {
+                #$bowtie_out =~ s/\.out$//;
+                #covert bowtie output to sam
                 `bowtie2sam.pl $bowtie_out > $bowtie_out.sam`;
 
                 #convert sam to bam
@@ -409,23 +428,29 @@ foreach my $te_path (@te_fastas) {
         `samtools index $path/$target.$TE.merged.sorted.bam`;
 
         #identify mping insertion sites
-`~/bin/get_TE_insertion_site.pl $path/$target.$TE.merged.sorted.bam $target $genome_path $TE $TSD{$TE} $exper`;
+`$scripts/get_TE_insertion_site.pl $path/$target.$TE.merged.sorted.bam $target $genome_path $TE $TSD{$TE} $exper`;
     }    #end of if mapping
 }    #end of foreach TE fasta
 
-print "\n####################\n#\n# output files:\n#\n####################\n\n";
-my @outdirs = `ls $outdir/$top_dir`;
+print "
+#############################
+#                           #
+#       output files:       #
+#                           #
+#############################\n\n";
+my @outdirs = `ls $current_dir/$top_dir`;
+chomp @outdirs;
 foreach my $out ( sort @outdirs ) {
-    my @files = `ls $outdir/$top_dir/$out/*gff`;
-    push @files, `ls $outdir/$top_dir/$out/*txt`;
-    push @files, `ls $outdir/$top_dir/$out/*list`;
-    print "##### Summary Files #####\n" if scalar @files > 0;
-    print "\t## found in $outdir/$top_dir/$out ##\n";
+    my @files = `ls $current_dir/$top_dir/$out/*gff`;
+    push @files, `ls $current_dir/$top_dir/$out/*txt`;
+    push @files, `ls $current_dir/$top_dir/$out/*list`;
+    chomp @files;
+    print "####### Summary Files ########\n" if scalar @files > 0;
     foreach my $file (sort @files) {
         print "$file\n";
     }
 }
-print "\n##### All File Descriptions #####\n";
+print "\n##### All File Descriptions ######\n";
 if ($mapping) {
     print "*.te_insertion_sites.gff
  gff3 containing information about TE insertions. 
