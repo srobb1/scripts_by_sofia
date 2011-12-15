@@ -360,8 +360,6 @@ foreach my $te_path (@te_fastas) {
     my @bowtie_out_files;
     my @files2merge;
 
-    print Dumper \%flanking_fq;
-    print "\n";
 
     if ($mapping) {
         foreach my $key ( sort keys %flanking_fq ) {
@@ -372,7 +370,7 @@ foreach my $te_path (@te_fastas) {
                 my @fq_path = split '/', $flanking_fq;
                 my $fq_name = pop @fq_path;
                 $fq_name =~ s/\.fq$//;
-`bowtie --best -S -q $genome_dir/$genome_file.bowtie_build_index $flanking_fq  > $path/$target.$fq_name.bowtie.single.out `;
+`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $flanking_fq  > $path/$target.$fq_name.bowtie.single.out `;
                 push @bowtie_out_files,
                   "$path/$target.$fq_name.bowtie.single.out";
             }    #end of foreach my $type ( sort keys %{ $flanking_fq{$key} } )
@@ -380,23 +378,21 @@ foreach my $te_path (@te_fastas) {
             {
                 my $flanking_fq_1 = $flanking_fq{$key}{1};
                 my $flanking_fq_2 = $flanking_fq{$key}{2};
-		print "flankers: $flanking_fq_1 & $flanking_fq_2\n";
                 my @fq_path       = split '/', $flanking_fq_1;
                 my $fq_name       = pop @fq_path;
                 $fq_name =~ s/\.fq$//;
                 if ( -s $flanking_fq_1 and -s $flanking_fq_2 ) {
 
                     #clean reads if both flanking.fq are non-zero file size
-print "$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq\n";
 `$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq`;
                 }    #end of if ( -s $flanking_fq_1 and -s $flanking_fq_2 )
                 if (    -s "$flanking_fq_1.matched"
                     and -s "$flanking_fq_2.matched" )
                 {
-`bowtie --best -S -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched > $path/$target.$fq_name.bowtie.mates.out`;
+`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched > $path/$target.$fq_name.bowtie.mates.out`;
                     push @bowtie_out_files,
                       "$path/$target.$fq_name.bowtie.mates.out";
-`bowtie --best -S -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
+`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
                     push @bowtie_out_files,
                       "$path/$target.$fq_name.bowtie.unPaired.out";
                 } # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
