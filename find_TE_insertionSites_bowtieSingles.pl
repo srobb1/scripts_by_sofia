@@ -374,6 +374,8 @@ foreach my $te_path (@te_fastas) {
                 push @bowtie_out_files,
                   "$path/$target.$fq_name.bowtie.single.out";
             }    #end of foreach my $type ( sort keys %{ $flanking_fq{$key} } )
+
+=cut ## for mate pair bowtie
             if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2} )
             {
                 my $flanking_fq_1 = $flanking_fq{$key}{1};
@@ -397,6 +399,9 @@ foreach my $te_path (@te_fastas) {
                       "$path/$target.$fq_name.bowtie.unPaired.out";
                 } # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
             } #end of if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2})
+=cut
+
+
         }    #end of foreach $key
         foreach my $bowtie_out (@bowtie_out_files) {
 
@@ -445,8 +450,9 @@ foreach my $out ( sort @outdirs ) {
     chomp @files;
     print "found in: $current_dir/$top_dir/$out/\n";
     foreach my $file (sort @files) {
-      $file =~ s/^$current_dir\/$top_dir\.$out\///;
-      print "$file\n";
+       my @filename = split /\// , $file;
+       my $name = pop @filename;
+       print "$name\n";
     }
 }
 

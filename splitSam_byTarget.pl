@@ -3,7 +3,6 @@ use strict;
 use File::Spec;
 use Getopt::Long;
 
-## creates a shell script for converting sam to bam files using samtools
 
 my $sam_file;
 my $sam_dir;
