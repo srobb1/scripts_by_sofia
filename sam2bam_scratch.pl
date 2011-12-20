@@ -2,21 +2,18 @@
 
 use strict;
 use File::Spec;
-
+#for i in `seq 1 12` ; do ~/bin/sam2bam_scratch.pl genome_path Chr$i ;done
 my $current     = File::Spec->curdir();
 my $current_dir = File::Spec->rel2abs($current);
-my $genome_path = '/home_stajichlab/robb/wesslerlab-shared/Rice/Genome/index/osa1r6_plus_Mito_Chloroplast.fa';
-#my $genome_path = '/home_stajichlab/robb/wesslerlab-shared/Rice/Genome/index/IRGSP_B5_plusMito_plusPlastid.fa;
+my $genome_path = shift; 
 my $dir = shift;
 my $dir_path = File::Spec->rel2abs($dir);
-#$dir_path .= '/';
 opendir( DIR, $dir ) || die "$!";
 foreach my $file ( readdir(DIR) ) {
-    #my ($volume,$directories,$filename) = File::Spec->splitpath( $file );
     my $sample;
     if ($file =~ /(\S+)\.sam$/){
 	$sample = $1;
-	open OUTSH, ">$dir_path/$sample.scratch.sam2bam.sh" or die "$dir_path/$sample.scratch.sam2bam.sh ".$!;
+	open OUTSH, ">$current_dir/$sample.scratch.sam2bam.sh" or die "$current_dir/$sample.scratch.sam2bam.sh ".$!;
 	print OUTSH "#!/bin/sh\n\n";
 	print OUTSH "tmp_dir=\`mktemp --tmpdir=/scratch -d\`\n";
 	print OUTSH 'cd $tmp_dir',"\n";	
@@ -24,9 +21,8 @@ foreach my $file ( readdir(DIR) ) {
 	print OUTSH "samtools sort  \$tmp_dir/$sample.bam  \$tmp_dir/$sample.sorted\n";
 	print OUTSH "samtools index  \$tmp_dir/$sample.sorted.bam\n";
 	print OUTSH "cd $dir_path\n";
-	print OUTSH 'remote_host=`hostname`' , "\n";
-	print OUTSH "echo \"scp \$remote_host:\$tmp_dir/* $dir_path/.\" > $dir_path/$sample.toMove.sh\n";
-	print OUTSH "echo \"ssh \$remote_host rm -rf \$tmp_dir\" >> $dir_path/$sample.toMove.sh\n";
+	print OUTSH "cp \$tmp_dir/* $dir_path/.\n";
+	print OUTSH "rm -rf \$tmp_dir\n";
 	close OUTSH;
      }
 

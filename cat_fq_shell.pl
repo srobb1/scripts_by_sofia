@@ -4,7 +4,7 @@ use File::Spec;
 #combines all the fq files in one directory
 #provide the direcotry name
 ## for multiple directories try this:
-## for i in `ls` ; do cat_fq_shell.pl $i ; done
+## for i in `ls` ; do cat_fq_shell.pl $i prefix; done
 my $dir = shift;
 my $prefix = shift;
 $prefix = !defined $prefix ? '' : $prefix . '.';

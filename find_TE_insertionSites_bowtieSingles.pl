@@ -19,9 +19,9 @@ my $len_cutoff         = 10;
 my $mismatch_allowance = 0;
 my $fq_dir;
 my $exper              = 'not.given';
-my $mate_file_1        = '_1.';
-my $mate_file_2        = '_2.';
-my $mate_file_unpaired = '.unPaired.';
+my $mate_file_1        = '_1\w*?fq';
+my $mate_file_2        = '_2\w*?fq';
+my $mate_file_unpaired = '.unPaired\w*?fq';
 my $outdir;
 
 GetOptions(
@@ -139,7 +139,7 @@ else {
 }
 
 sub getHelp {
-    print "
+    print ' 
 usage:
 ./find_TE_insertionSites.pl [-t TE_fasta_file][-g chromosome_genome_fasta][-d dir_of_fq][-e short_sample_name][-h] 
 
@@ -157,9 +157,9 @@ options:
 -o STR          base output directory, needs to exist, will not create, full path [cwd] 
 -l INT          len cutoff for the te trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (int, ex 0.1) [0] 
--1 STR		string to identify mate 1 paired files [_1.]
--2 STR          string to identify mate 2 paired files [_2.]
--u STR          string to identify unpaied files [_unPaired.] 
+-1 STR          regular expression to identify mate 1 paired files [_1\w*?fq]
+-2 STR          regular expression to identify mate 2 paired files [_2\w*?fq]
+-u STR          regular expression to identify unpaied files [.unPaired\w*?fq] 
 -h              this message
 
 SAMPLE TE FASTA
@@ -172,7 +172,7 @@ CTTGTATCAATTAAATGCTTTGCTTAGTCTTGGAAACGTCAAAGTGAAACCCCTCCACTGTGGGGATTGT
 TTCATAAAAGATTTCATTTGAGAGAAGATGGTATAATATTTTGGGTAGCCGTGCAATGACACTAGCCATT
 GTGACTGGCC
 
-";
+';
 
     exit 1;
 }
@@ -356,7 +356,7 @@ foreach my $te_path (@te_fastas) {
       $flanking_fq{$file}{unpaired} = $file;
     }
   }
-
+die "Problem finding *flaningReads.fq" if scalar (keys %flanking_fq) == 0;
     my @bowtie_out_files;
     my @files2merge;
 
@@ -375,31 +375,31 @@ foreach my $te_path (@te_fastas) {
                   "$path/$target.$fq_name.bowtie.single.out";
             }    #end of foreach my $type ( sort keys %{ $flanking_fq{$key} } )
 
-=cut ## for mate pair bowtie
-            if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2} )
-            {
-                my $flanking_fq_1 = $flanking_fq{$key}{1};
-                my $flanking_fq_2 = $flanking_fq{$key}{2};
-                my @fq_path       = split '/', $flanking_fq_1;
-                my $fq_name       = pop @fq_path;
-                $fq_name =~ s/\.fq$//;
-                if ( -s $flanking_fq_1 and -s $flanking_fq_2 ) {
-
-                    #clean reads if both flanking.fq are non-zero file size
-`$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq`;
-                }    #end of if ( -s $flanking_fq_1 and -s $flanking_fq_2 )
-                if (    -s "$flanking_fq_1.matched"
-                    and -s "$flanking_fq_2.matched" )
-                {
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched > $path/$target.$fq_name.bowtie.mates.out`;
-                    push @bowtie_out_files,
-                      "$path/$target.$fq_name.bowtie.mates.out";
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
-                    push @bowtie_out_files,
-                      "$path/$target.$fq_name.bowtie.unPaired.out";
-                } # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
-            } #end of if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2})
-=cut
+#=cut ## for mate pair bowtie
+#            if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2} )
+#            {
+#                my $flanking_fq_1 = $flanking_fq{$key}{1};
+#                my $flanking_fq_2 = $flanking_fq{$key}{2};
+#                my @fq_path       = split '/', $flanking_fq_1;
+#                my $fq_name       = pop @fq_path;
+#                $fq_name =~ s/\.fq$//;
+#                if ( -s $flanking_fq_1 and -s $flanking_fq_2 ) {
+#
+#                    #clean reads if both flanking.fq are non-zero file size
+#`$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq`;
+#                }    #end of if ( -s $flanking_fq_1 and -s $flanking_fq_2 )
+#                if (    -s "$flanking_fq_1.matched"
+#                    and -s "$flanking_fq_2.matched" )
+#                {
+#`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched > $path/$target.$fq_name.bowtie.mates.out`;
+#                    push @bowtie_out_files,
+#                      "$path/$target.$fq_name.bowtie.mates.out";
+#`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
+#                    push @bowtie_out_files,
+#                      "$path/$target.$fq_name.bowtie.unPaired.out";
+#                } # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
+#            } #end of if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2})
+#=cut
 
 
         }    #end of foreach $key

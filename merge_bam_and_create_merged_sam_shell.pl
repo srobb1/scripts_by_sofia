@@ -6,7 +6,7 @@ use File::Spec;
 # ex: a directory for one chromosome
 # for i in `seq 1 12` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl  Chr$i ; done
 #  or
-# for i in `ls` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl  $i ; done
+# for i in `ls` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl $i EG4_500bp; done
 my $dir = shift;
 my $prefix = shift;
 $prefix = !defined $prefix ? '' : $prefix.'.'; 
@@ -48,8 +48,8 @@ print SH "samtools index  \$tmp_dir/$lowest_dir.merged.sorted.bam\n";
 print SH "samtools view -h \$tmp_dir/$lowest_dir.merged.sorted.bam -o \$tmp_dir/$lowest_dir.merged.sorted.sam\n";
 #`samtools view -h $one_up/$lowest_dir.merged.sorted.bam -o $two_up/sam_split_by_chromosome/$lowest_dir.merged.sorted.sam`;
 
-print SH "for i in `ls *.sam*` ; do cp \$tmp_dir/$i $two_up/sam_split_by_chromosome/$prefix$i ; done\n";
-print SH "for i in `ls *.bam*` ; do cp \$tmp_dir/$i $one_up/$prefix$i ; done\n";
+print SH "for i in `ls *.sam*` ; do cp \$tmp_dir/\$i $two_up/sam_split_by_chromosome/$prefix\$i ; done\n";
+print SH "for i in `ls *.bam*` ; do cp \$tmp_dir/\$i $one_up/$prefix\$i ; done\n";
 print SH "cd $current_dir\n";
 print SH "rm -rf \$tmp_dir\n";
 ##while the script is running it is on the remote node so i do not have to ssh to rm the files

@@ -141,11 +141,13 @@ foreach my $sample ( sort keys %files ) {
 		push @trim_filter, 
 "fastq_quality_trimmer -Q$Q -l $minLength -t $minQuality -i $dir_path/$file.$fq_ext |fastq_quality_filter -Q$Q -q $minQuality -p $minPercent -v -o \$tmp_dir/$file.trimmed.filtered.fq";
         	push @aln,
-"bwa aln -t 10 $genome_path \$tmp_dir/$file$desc$ext.matched > \$tmp_dir/$file$desc.matched.sai";
+"bwa aln -t 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
+#"bwa aln -t 10 $genome_path \$tmp_dir/$file$desc$ext.matched > \$tmp_dir/$file$desc.matched.sai";
 	}else{
 		print OUTFILE "ln -s $dir_path/$file.$fq_ext \$tmp_dir/.\n";
         	push @aln,
-"bwa aln -t 10 -q 10 $genome_path \$tmp_dir/$file$desc$ext.matched > \$tmp_dir/$file$desc.matched.sai";
+"bwa aln -t 10 -q 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
+#"bwa aln -t 10 -q 10 $genome_path \$tmp_dir/$file$desc$ext.matched > \$tmp_dir/$file$desc.matched.sai";
 	}
 
     }
@@ -164,7 +166,7 @@ foreach my $sample ( sort keys %files ) {
         push @clean, "if [ -e \$tmp_dir/$sample.unPaired.sai ] ; then bwa samse  $genome_path \$tmp_dir/$sample.unPaired.sai \$tmp_dir/$sample.unPaired.fq   > \$tmp_dir/$sample.unPaired.sam ; fi";
         push @split_sam_by_target,"if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then ~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.unPaired.sam ; fi";
         push @sam,
-"bwa sampe -a $insertLength $genome_path \$tmp_dir/$pair1$desc.matched.sai \$tmp_dir/$pair2$desc.matched.sai \$tmp_dir/$pair1$desc$ext.matched \$tmp_dir/$pair2$desc$ext.matched  > \$tmp_dir/$sample.sam";
+"bwa sampe -a $insertLength $genome_path \$tmp_dir/$pair1$desc.matched.sai \$tmp_dir/$pair2$desc.matched.sai \$tmp_dir/$pair1$desc.matched$ext \$tmp_dir/$pair2$desc.matched$ext  > \$tmp_dir/$sample.sam";
         push @split_sam_by_target,
           "~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.sam";
         push @sam2fq,
@@ -211,7 +213,7 @@ foreach my $sample ( sort keys %files ) {
     print OUTFILE "cp \$tmp_dir/*sam $current_dir/sam_for_all_reads\n";
     if ($filter_trim){
     	print OUTFILE "mkdir -p $current_dir/fq_split_by_number_filtered\n";
-    	print OUTFILE "cp \$tmp_dir/*matched \$tmp_dir/*unPaired.fq $current_dir/fq_split_by_number_filtered\n";
+    	print OUTFILE "cp \$tmp_dir/*.matched.fq \$tmp_dir/*unPaired.fq $current_dir/fq_split_by_number_filtered\n";
     }
     print OUTFILE "mkdir -p $current_dir/fq_split_by_chromosome\n";
     print OUTFILE "mkdir -p $current_dir/sam_split_by_chromosome\n";

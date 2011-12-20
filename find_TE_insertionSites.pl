@@ -19,9 +19,10 @@ my $len_cutoff         = 10;
 my $mismatch_allowance = 0;
 my $fq_dir;
 my $exper              = 'not.given';
-my $mate_file_1        = '_1.';
-my $mate_file_2        = '_2.';
-my $mate_file_unpaired = '.unPaired.';
+## REGEX = _1, followed by (\D*?) optional non-digit characters, followed by fq
+my $mate_file_1        = '_1\D*?fq';
+my $mate_file_2        = '_2\D*?fq';
+my $mate_file_unpaired = '.unPaired\D*?fq';
 my $outdir;
 
 GetOptions(
@@ -139,7 +140,7 @@ else {
 }
 
 sub getHelp {
-    print "
+    print ' 
 usage:
 ./find_TE_insertionSites.pl [-t TE_fasta_file][-g chromosome_genome_fasta][-d dir_of_fq][-e short_sample_name][-h] 
 
@@ -157,9 +158,9 @@ options:
 -o STR          base output directory, needs to exist, will not create, full path [cwd] 
 -l INT          len cutoff for the te trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (int, ex 0.1) [0] 
--1 STR		string to identify mate 1 paired files [_1.]
--2 STR          string to identify mate 2 paired files [_2.]
--u STR          string to identify unpaied files [_unPaired.] 
+-1 STR		regular expression to identify mate 1 paired files [_1\D*?fq]
+-2 STR          regular expression to identify mate 2 paired files [_2\D*?fq]
+-u STR          regular expression to identify unpaied files [.unPaired\D*?fq] 
 -h              this message
 
 SAMPLE TE FASTA
@@ -172,7 +173,7 @@ CTTGTATCAATTAAATGCTTTGCTTAGTCTTGGAAACGTCAAAGTGAAACCCCTCCACTGTGGGGATTGT
 TTCATAAAAGATTTCATTTGAGAGAAGATGGTATAATATTTTGGGTAGCCGTGCAATGACACTAGCCATT
 GTGACTGGCC
 
-";
+';
 
     exit 1;
 }
@@ -311,18 +312,21 @@ foreach my $te_path (@te_fastas) {
     }
 
 ##insert mate finder here
-
     my %flanking_fq;
     my @files_1;
-    while (my $file = <$path/*$mate_file_1*flankingReads.fq>){
-        push (@files_1, $file) if $file !~ /$mate_file_unpaired/;
-    }
     my @files_2;
-    while (my $file = <$path/*$mate_file_2*flankingReads.fq>){
-        push (@files_2, $file) if $file !~ /$mate_file_unpaired/;
+    my @files_unpaired;
+    my @flanking_files = <$path/*flankingReads.fq>;
+    foreach my $file  (@flanking_files){
+      next if -s $file;
+      if ($file =~ /$mate_file_unpaired/){
+        push (@files_unpaired , $file);
+      }elsif ($file =~ /$mate_file_1/){
+        push (@files_1, $file);
+      }elsif ($file =~ /$mate_file_2/){
+        push (@files_2, $file);
+      }
     }
-
-    my @files_unpaired = <$path/*$mate_file_unpaired*flankingReads.fq>;
 
     if ( @files_1 and @files_2 ) {
       for ( my $i = 0 ; $i < @files_1 ; $i++ ) {
@@ -359,40 +363,38 @@ foreach my $te_path (@te_fastas) {
 
     my @bowtie_out_files;
     my @files2merge;
-
+die "Problem finding *flankingReads.fq" if scalar (keys %flanking_fq) == 0;
 
     if ($mapping) {
         foreach my $key ( sort keys %flanking_fq ) {
             foreach my $type ( sort keys %{ $flanking_fq{$key} } ) {
                 my $flanking_fq = $flanking_fq{$key}{$type};
-
                 #remove and save filename part of path
                 my @fq_path = split '/', $flanking_fq;
                 my $fq_name = pop @fq_path;
                 $fq_name =~ s/\.fq$//;
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $flanking_fq  > $path/$target.$fq_name.bowtie.single.out `;
+`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $flanking_fq  1> $path/$target.$fq_name.bowtie.single.out 2>> $path/$target.stderr` ;
                 push @bowtie_out_files,
                   "$path/$target.$fq_name.bowtie.single.out";
             }    #end of foreach my $type ( sort keys %{ $flanking_fq{$key} } )
             if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2} )
-            {
+            {   
                 my $flanking_fq_1 = $flanking_fq{$key}{1};
                 my $flanking_fq_2 = $flanking_fq{$key}{2};
                 my @fq_path       = split '/', $flanking_fq_1;
                 my $fq_name       = pop @fq_path;
                 $fq_name =~ s/\.fq$//;
                 if ( -s $flanking_fq_1 and -s $flanking_fq_2 ) {
-
                     #clean reads if both flanking.fq are non-zero file size
-`$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 > $path/$fq_name.unPaired.fq`;
+`$scripts/clean_pairs_memory.pl -1 $flanking_fq_1 -2 $flanking_fq_2 1> $path/$fq_name.unPaired.fq 2>> $path/$target.stderr`;
                 }    #end of if ( -s $flanking_fq_1 and -s $flanking_fq_2 )
                 if (    -s "$flanking_fq_1.matched"
                     and -s "$flanking_fq_2.matched" )
                 {
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched > $path/$target.$fq_name.bowtie.mates.out`;
+`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched 1> $path/$target.$fq_name.bowtie.mates.out 2>> $path/$target.stderr`;
                     push @bowtie_out_files,
                       "$path/$target.$fq_name.bowtie.mates.out";
-`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq > $path/$target.$fq_name.bowtie.unPaired.out`;
+`bowtie --best -q $genome_dir/$genome_file.bowtie_build_index $path/$fq_name.unPaired.fq 1> $path/$target.$fq_name.bowtie.unPaired.out 2>> $path/$target.stderr`;
                     push @bowtie_out_files,
                       "$path/$target.$fq_name.bowtie.unPaired.out";
                 } # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
@@ -403,25 +405,35 @@ foreach my $te_path (@te_fastas) {
             if ( -s $bowtie_out ) {
                 #$bowtie_out =~ s/\.out$//;
                 #covert bowtie output to sam
-                `bowtie2sam.pl $bowtie_out > $bowtie_out.sam`;
+                `bowtie2sam.pl $bowtie_out 1> $bowtie_out.sam 2>> $path/$target.stderr`;
 
                 #convert sam to bam
-`samtools import $genome_path.fai $bowtie_out.sam $bowtie_out.bam`;
+`samtools import $genome_path.fai $bowtie_out.sam $bowtie_out.bam 2>> $path/$target.stderr`;
 
                 #sort bam
-                `samtools sort $bowtie_out.bam $bowtie_out.sorted`;
+                `samtools sort $bowtie_out.bam $bowtie_out.sorted 2>> $path/$target.stderr`;
 
                 #index bam
-                `samtools index $bowtie_out.sorted.bam`;
-                push @files2merge, "$bowtie_out.sorted.bam";
+                `samtools index $bowtie_out.sorted.bam 2>> $path/$target.stderr`;
+                push @files2merge, "$bowtie_out.sorted.bam 2>> $path/$target.stderr";
             }    #end of if ( -s $bowtie_out )
         }    #end of foreach my $bowtie_out (@bowtie_out_files)
-        my $files2merge = join " ", @files2merge;
-
+	my $files2merge;
+	if (@files2merge > 50){
+          my @big_files_2_merge;
+	  for (my $i = 0 ; $i < @files2merge ; $i=$i+50){
+	    $files2merge =join " ", (splice (@files2merge, 0 , 50));
+            `samtools merge -f $path/$target.$TE.merged.bam.temp $files2merge 2>> $path/$target.stderr`;
+             push @big_files_2_merge , '$path/$target.$TE.merged.bam.temp';
+          }
+          $files2merge = join ',' , @big_files_2_merge;
+        }else {
+          $files2merge = join ',' , @files2merge;
+        }
         #merge paired and unPaired bam
-        `samtools merge -f $path/$target.$TE.merged.bam $files2merge`;
-`samtools sort $path/$target.$TE.merged.bam $path/$target.$TE.merged.sorted`;
-        `samtools index $path/$target.$TE.merged.sorted.bam`;
+        `samtools merge -f $path/$target.$TE.merged.bam $files2merge 2>> $path/$target.stderr`;
+`samtools sort $path/$target.$TE.merged.bam $path/$target.$TE.merged.sorted 2>> $path/$target.stderr`;
+        `samtools index $path/$target.$TE.merged.sorted.bam 2>> $path/$target.stderr`;
 
         #identify mping insertion sites
 `$scripts/get_TE_insertion_site.pl $path/$target.$TE.merged.sorted.bam $target $genome_path $TE $TSD{$TE} $exper`;

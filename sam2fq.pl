@@ -1,6 +1,9 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Spec;
+#for i in `seq 1 12` ; do sam2fq.pl Chr$i ; done
+#for i in `seq 1 12` ; do echo "sam2fq.pl Chr$i" > Chr$i.sam2fq.temp ; done
+
 my $dir = shift;
 my $dir_path = File::Spec->rel2abs($dir);
 my $current     = File::Spec->curdir();
@@ -58,6 +61,15 @@ foreach my $file ( readdir(DIR) ) {
         }
         elsif ( $flag >= 128 and $flag < 192 ) {    #second mate
             print OUTFQ_2 $toPrint;
+        }
+        elsif ( $name =~ /\.f$/ ) {    #454 first mate
+            print OUTFQ_1 $toPrint;
+        }
+        elsif ( $name =~ /\.r$/ ) {    #454 second mate
+            print OUTFQ_2 $toPrint;
+        }
+        elsif ( $name =~ /\.fn$/ ) {    #454 unpaired
+            print OUTUNPAIRED $toPrint;
         }
         else {
             warn
