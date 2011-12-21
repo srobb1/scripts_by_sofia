@@ -420,15 +420,17 @@ die "Problem finding *flankingReads.fq" if scalar (keys %flanking_fq) == 0;
         }    #end of foreach my $bowtie_out (@bowtie_out_files)
 	my $files2merge;
 	if (@files2merge > 50){
+	  my $filecount = scalar @files2merge;
           my @big_files_2_merge;
-	  for (my $i = 0 ; $i < @files2merge ; $i=$i+50){
+	  for (my $i = 0 ; $i < $filecount ; $i=$i+50){
 	    $files2merge =join " ", (splice (@files2merge, 0 , 50));
-            `samtools merge -f $path/$target.$TE.merged.bam.temp $files2merge 2>> $path/$target.stderr`;
-             push @big_files_2_merge , '$path/$target.$TE.merged.bam.temp';
+            `samtools merge -f $path/$target.$TE.merged.bam.$i.temp $files2merge 2>> $path/$target.stderr`;
+             push @big_files_2_merge , "$path/$target.$TE.merged.bam.$i.temp";
           }
-          $files2merge = join ',' , @big_files_2_merge;
+          #$files2merge = join ', ' , @big_files_2_merge;
+          $files2merge = "$path/$target.$TE.merged.bam.*.temp";
         }else {
-          $files2merge = join ',' , @files2merge;
+          $files2merge = join ', ' , @files2merge;
         }
         #merge paired and unPaired bam
         `samtools merge -f $path/$target.$TE.merged.bam $files2merge 2>> $path/$target.stderr`;
@@ -457,7 +459,7 @@ foreach my $out ( sort @outdirs ) {
     chomp @files;
     print "found in: $current_dir/$top_dir/$out/\n";
     foreach my $file (sort @files) {
-      $file =~ s/^$current_dir\/$top_dir\.$out\///;
+      $file =~ s/^$current_dir\/$top_dir\/$out\///;
       print "$file\n";
     }
 }

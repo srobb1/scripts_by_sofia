@@ -21,6 +21,7 @@ my %inserts;
 my %insert_dfs;
 my %features;
 my %strains;
+my %transposons;
 my @features_type = $db->get_features_by_type($query_type);
 foreach my $feature (@features_type) {
     my $source = $feature->source;	
@@ -33,7 +34,7 @@ foreach my $feature (@features_type) {
     my $insert_type =  ${$attr_hash{'type'}}[0];
     my $avg_flankers =  ${$attr_hash{'avg_flankers'}}[0];
     my $spanners =  ${$attr_hash{'spanners'}}[0];
-    
+
     #what feature is the insertion inside of
     my @loc_features = $db->get_features_by_location(-seq_id=>$ref,-start=>$start,-end=>$end);
     my $insert_feature = '';
@@ -46,10 +47,35 @@ foreach my $feature (@features_type) {
 	my $f_strand = $loc_feature->strand;
 	my $f_len = $loc_feature->length;
         if ($f_strand eq '+'){
-		$distance_from_start = (($start - $f_start)/ $f_len) * 100; 
+		$distance_from_start = ($start - $f_start) 
 	}else{
-	  	$distance_from_start = (($f_end - $start) / $f_len)*100; 
+	  	$distance_from_start = ($f_end - $start); 
         }
+##the 9th column Note=
+        my $transponCheck = 1;
+        if ($transponCheck){
+          my %attr = $loc_feature->attributes;
+            if ($type =~ /gene/){
+               my $notes_arry_ref = $attr{'Note'};
+               my $note = ${$notes_arry_ref}[0];
+               my $name = ${$attr{'load_id'}}[0];
+               $transposons{$name}=0 if $note =~ /transposon/;
+	       $insert_feature = 'transposon';
+               $dfs = $distance_from_start;
+    	       #push @{$insert_dfs{'transposon'}} , $distance_from_start; 
+               last if $note =~ /transposon/;
+             }elsif($type =~ /mRNA/ or $type =~ /UTR/ or $type =~ /exon/){
+               my $name_arry_ref = $attr{'parent_id'};
+               my $name = ${$name_arry_ref}[0];
+               $name =~ s/(\w+)\.\d+?$/$1/;
+	       $insert_feature = 'transposon';
+               $dfs = $distance_from_start;
+	       
+    	       #push @{$insert_dfs{'transposon'}} , $distance_from_start; 
+               last if exists $transposons{$name};
+             }
+        }
+## end transposon check
         if ($type =~ /mRNA/){
     	  push @{$insert_dfs{'mRNA'}} , $distance_from_start; 
 	}
@@ -75,6 +101,7 @@ foreach my $feature (@features_type) {
     $features{$insert_feature}++;
     $strains{$source}{insert_feature}{$insert_feature}++;
     $strains{$source}{insert_type}{$insert_type}++;
+    $strains{$source}{transposon}{$insert_type}++ if $insert_feature eq 'transposon';
     #print "$source $ref:$start..$end $insert_type $avg_flankers $spanners $insert_feature\n"; 
 
 }
@@ -91,6 +118,11 @@ foreach my $strain (sort keys %strains){
 	my $count = $strains{$strain}{insert_type}{$type};
 	print "$strain\t$type\t$count\n";
   }
+  foreach my $type (sort keys %{$strains{$strain}{transposon}}){
+	my $count = $strains{$strain}{transposon}{$type};
+	print "$strain\ttransposon-insertion\t$type\t$count\n";
+  }
+  
 }
 print "how many mping insertions are there in a specific feature type in each strain?\n";
 print "strain\tfeature\tcount\n";
