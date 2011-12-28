@@ -145,7 +145,7 @@ print "inserts in features are binned by relative distance from start of feature
 foreach my $type (sort keys %insert_dfs){
 	my @dfs = @{$insert_dfs{$type}};
 	#my $partitions = 100;
-	my $partitions = [10,20,30,40,50,60,70,80,90,100];
+	my $partitions = [50,100,150,200,250,350,400,450,500,550,1000,2000,5000];
 	my $stat_dfs = Statistics::Descriptive::Full->new();
         $stat_dfs->add_data(@dfs);
         my $bins_dfs = $stat_dfs->frequency_distribution_ref($partitions);	

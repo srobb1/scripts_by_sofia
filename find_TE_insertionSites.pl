@@ -318,7 +318,7 @@ foreach my $te_path (@te_fastas) {
     my @files_unpaired;
     my @flanking_files = <$path/*flankingReads.fq>;
     foreach my $file  (@flanking_files){
-      next if -s $file;
+      next if -z $file; ##next file if size is 0
       if ($file =~ /$mate_file_unpaired/){
         push (@files_unpaired , $file);
       }elsif ($file =~ /$mate_file_1/){
@@ -364,7 +364,7 @@ foreach my $te_path (@te_fastas) {
     my @bowtie_out_files;
     my @files2merge;
 die "Problem finding *flankingReads.fq" if scalar (keys %flanking_fq) == 0;
-
+#print Dumper \%flanking_fq;
     if ($mapping) {
         foreach my $key ( sort keys %flanking_fq ) {
             foreach my $type ( sort keys %{ $flanking_fq{$key} } ) {
