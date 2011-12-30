@@ -35,6 +35,7 @@ my @queries = qw (gene cds three_prime_UTR five_prime_UTR);
 foreach my $query (@queries){
   foreach my $feature ($db->get_features_by_type($query)) {
     my $ref = $feature->ref; 
+    next if !exists $ref{$ref};
     if (!exists $feat{$query}{$ref}){
       for (my $i = 0; $i < $ref{$ref} + 1 ; $i++){
         ${$feat{$query}{$ref}}[$i] = 0;
@@ -43,12 +44,12 @@ foreach my $query (@queries){
 	
 ### do not count anything that belongs to a gene that is annotated as a transposon
 ##change this to =0 if you want to count transposons
-my $trasposonCheck = 1;
+my $transposonCheck = 1;
 
 ##I do not want to count any exons or other features that belong
 ##to transposons. determined by the word 'transposon' appearing in
 ##the 9th column Note=
-    if ($transponCheck){
+    if ($transposonCheck){
       my %attr = $feature->attributes;
       if ($query eq 'gene'){
         my $notes_arry_ref = $attr{'Note'};
