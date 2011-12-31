@@ -73,7 +73,8 @@ foreach my $file ( readdir(DIR) ) {
         }
         else {
             warn
-"it is unclear if this is a first or second pair based on flag: $name flag:$flag\n";
+"it is unclear if this is a first or second pair based on flag so it will be categorized as unpaired: $name flag:$flag\n";
+	    print OUTUNPAIRED $toPrint;
         }
     }
 }

@@ -57,6 +57,7 @@ foreach my $feature (@features_type) {
       $distance_from_start = ($f_end - $start); 
       $distance_from_end = ($start - $f_start); 
     }
+    my ($gene2right, $gene2left);
     if ($type =~ /mRNA/ or $type =~ /UTR/ or $type =~ /exon/ or $type =~/intron/ or $type=~/intergenic/){
       if ($type !~ /intergenic/){ #intergenic, does not have a parent or a name
       ##this feature's attributes
@@ -73,41 +74,61 @@ foreach my $feature (@features_type) {
         if ($p_note =~ /transposon/){
           $type = "transposon_$type";
         }
+     }else {
+       ##if intergenic, what is strand of surrounding genes
+       ##upstream_gene,downstream_gene  gene_2_right_strand, gene_2_left_strand
+       my %attr = $loc_feature->attributes;
+       my $gene2right_ref = $attr{'upstream_gene'};
+       my $gene2left_ref = $attr{'downstream_gene'};
+       my $upstream = ${$gene2right_ref}[0];
+       my $downstream = ${$gene2left_ref}[0];
+       $upstream =~ s/.+\((\+|\-)\)$/$1/;
+       $downstream =~ s/.+\((\+|\-)\)$/$1/;
+       $gene2right = $upstream eq '+' ? 1 : -1;
+       $gene2left = $downstream eq '+' ? 1 : -1;
      } 
-     if ( ($type eq 'three_prime_UTR' or $type eq 'five_prime_UTR') and (exists $each{$start}{exon} or exists $each{$start}{intron}) ){
-        delete $each{$start}{exon} if exists $each{$start}{exon} ;
-        delete $each{$start}{intron} if exists $each{$start}{intron} ;
-      }elsif ( ($type eq 'transposon_three_prime_UTR' or $type eq 'transposon_five_prime_UTR') and (exists $each{$start}{transposon_exon} or exists $each{$start}{transposon_intron})){
-        delete $each{$start}{transposon_exon} if exists $each{$start}{transposon_exon};
-        delete $each{$start}{transposon_intron} if exists $each{$start}{transposon_intron};
-      }elsif ( ($type eq 'exon' or $type eq 'intron') and (exists $each{$start}{three_prime_UTR} or exists $each{$start}{five_prime_UTR}) ){
+     if ( ($type eq 'three_prime_UTR' or $type eq 'five_prime_UTR') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{intron}) ){
+        delete $each{$ref}{$start}{exon} if exists $each{$ref}{$start}{exon} ;
+        delete $each{$ref}{$start}{intron} if exists $each{$ref}{$start}{intron} ;
+      }elsif ( ($type eq 'transposon_three_prime_UTR' or $type eq 'transposon_five_prime_UTR') and (exists $each{$ref}{$start}{transposon_exon} or exists $each{$ref}{$start}{transposon_intron})){
+        delete $each{$ref}{$start}{transposon_exon} if exists $each{$ref}{$start}{transposon_exon};
+        delete $each{$ref}{$start}{transposon_intron} if exists $each{$ref}{$start}{transposon_intron};
+      }elsif ( ($type eq 'exon' or $type eq 'intron') and (exists $each{$ref}{$start}{three_prime_UTR} or exists $each{$ref}{$start}{five_prime_UTR}) ){
 	next;
-      }elsif ( ($type eq 'transposon_exon' or $type eq 'transposon_intron')  and (exists $each{$start}{transposon_three_prime_UTR} or exists $each{$start}{transposon_five_prime_UTR}) ){
+      }elsif ( ($type eq 'transposon_exon' or $type eq 'transposon_intron')  and (exists $each{$ref}{$start}{transposon_three_prime_UTR} or exists $each{$ref}{$start}{transposon_five_prime_UTR}) ){
 	next;
       }
-      $each{$start}{$type}{source}=$source;      
-      $each{$start}{$type}{dfs}=$distance_from_start;      
-      $each{$start}{$type}{dfe}=$distance_from_end;
-      $each{$start}{$type}{insert_type}=$insert_type;
+      $each{$ref}{$start}{$type}{source}=$source;      
+      $each{$ref}{$start}{$type}{dfs}=$distance_from_start;      
+      $each{$ref}{$start}{$type}{dfe}=$distance_from_end;
+      $each{$ref}{$start}{$type}{feat_len}=$f_len;
+      $each{$ref}{$start}{$type}{insert_type}=$insert_type;
+      if ($type eq 'intergenic'){
+        $each{$ref}{$start}{$type}{gene2right}=$gene2right;
+        $each{$ref}{$start}{$type}{gene2left}=$gene2left;
+   
+      }
     }
   }
 }
 #print Dumper \%each;
-foreach my $start (keys %each){
-  foreach my $insert_feature (keys %{$each{$start}}){
-    my $dfs = $each{$start}{$insert_feature}{dfs};
-    my $dfe = $each{$start}{$insert_feature}{dfe};
-    my $source = $each{$start}{$insert_feature}{source};
-    my $insert_type = $each{$start}{$insert_feature}{insert_type};
-    push @{$insert_dfs{$insert_feature}} , $dfs; 
-    push @{$insert_dfe{$insert_feature}} , $dfe; 
-    $features{$insert_feature}++;
-    $strains{$source}{insert_feature}{$insert_feature}++;
-    $strains{$source}{transposon}{$insert_type}++ if $insert_feature =~ /transposon/;
-    $strains{$source}{insert_type}{$insert_type}++ if $insert_feature !~ /mRNA/;
-    $inserts{$insert_type}{$insert_feature}++;
-    $insert_feature = '';
-    $insert_type = '';
+foreach my $ref (keys %each){
+  foreach my $start (keys %{$each{$ref}}){
+    foreach my $insert_feature (keys %{$each{$ref}{$start}}){
+      my $dfs = $each{$ref}{$start}{$insert_feature}{dfs};
+      my $dfe = $each{$ref}{$start}{$insert_feature}{dfe};
+      my $source = $each{$ref}{$start}{$insert_feature}{source};
+      my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
+      push @{$insert_dfs{$insert_feature}} , $dfs; 
+      push @{$insert_dfe{$insert_feature}} , $dfe; 
+      $features{$insert_feature}++;
+      $strains{$source}{insert_feature}{$insert_feature}++;
+      $strains{$source}{transposon}{$insert_type}++ if $insert_feature =~ /transposon/;
+      $strains{$source}{insert_type}{$insert_type}++ if $insert_feature !~ /mRNA/;
+      $inserts{$insert_type}{$insert_feature}++;
+      $insert_feature = '';
+      $insert_type = '';
+    }
   }
 }
 print "how many mping insertions are there in a specific feature type?\n";
@@ -146,6 +167,89 @@ foreach my $type (sort keys %inserts){
     print "$type\t$feat_type\t$count\n";
   }
 }
+
+print "is there a preference for the distance from the start of the feature in which mping is inserted?\n";
+print "souce\tref\tstart\tfeat\tf_len\tdfs\tdfe\n";	
+my %intergenic;
+foreach my $ref (sort keys %each){
+  foreach my $start (sort keys %{$each{$ref}}){
+    foreach my $insert_feature (sort keys %{$each{$ref}{$start}}){
+      my $dfs = $each{$ref}{$start}{$insert_feature}{dfs};
+      my $dfe = $each{$ref}{$start}{$insert_feature}{dfe};
+      my $source = $each{$ref}{$start}{$insert_feature}{source};
+      my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
+      my $f_len = $each{$ref}{$start}{$insert_feature}{feat_len};
+      my $rel_pos = $dfs / $f_len ;
+      print "$source\t$ref\t$insert_feature\t$f_len\t$dfs\t$dfe\t$rel_pos\n";	
+      my ($g2r, $g2l) = '';
+      if ($insert_feature eq 'intergenic'){
+        $g2r = $each{$ref}{$start}{$insert_feature}{gene2right};
+        $g2l = $each{$ref}{$start}{$insert_feature}{gene2left};
+      }
+      if ($insert_feature eq 'intergenic' and $f_len > 5000){
+	## distance from upstream gene
+        push @{$intergenic{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+        push @{$intergenic{gt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        push @{$intergenic{gt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+        push @{$intergenic{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        push @{$intergenic{gt_5000}{dfe}} , $dfe;
+        push @{$intergenic{gt_5000}{dfs}} , $dfs;
+      }elsif ($insert_feature eq 'intergenic' and $f_len < 5000){
+        push @{$intergenic{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+        push @{$intergenic{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        push @{$intergenic{lt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+        push @{$intergenic{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        push @{$intergenic{lt_5000}{dfe}} , $dfe;
+        push @{$intergenic{lt_5000}{dfs}} , $dfs;
+
+      }
+    }
+  }
+}
+##distance from up and downstream genes
+{
+   my @dug = @{$intergenic{gt_5000}{dug}};
+   my $partitions = [1000,5000,100000];
+   my $stat_dug = Statistics::Descriptive::Full->new();
+   $stat_dug->add_data(@dug);
+   my $bins_dug = $stat_dug->frequency_distribution_ref($partitions);
+   
+   print "**intergenic gt 5000:distance from upstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_dug}){
+     print "\t\t$bin\tcount = ${$bins_dug}{$bin}\n";
+   }
+   my @ddg = @{$intergenic{gt_5000}{ddg}};
+   my $stat_ddg = Statistics::Descriptive::Full->new();
+   $stat_ddg->add_data(@ddg);
+   my $bins_ddg = $stat_ddg->frequency_distribution_ref($partitions);
+   
+   print "**intergenic gt 5000:distance from downstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_ddg}){
+     print "\t\t$bin\tcount = ${$bins_ddg}{$bin}\n";
+   }
+
+   @dug = @{$intergenic{lt_5000}{dug}};
+   $stat_dug = Statistics::Descriptive::Full->new();
+   $stat_dug->add_data(@dug);
+   $bins_dug = $stat_dug->frequency_distribution_ref($partitions);
+
+   print "**intergenic lt 5000:distance from upstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_dug}){
+     print "\t\t$bin\tcount = ${$bins_dug}{$bin}\n";
+   }
+   @ddg = @{$intergenic{lt_5000}{ddg}};
+   $stat_ddg = Statistics::Descriptive::Full->new();
+   $stat_ddg->add_data(@ddg);
+   $bins_ddg = $stat_ddg->frequency_distribution_ref($partitions);
+   
+   print "**intergenic lt 5000:distance from downstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_ddg}){
+     print "\t\t$bin\tcount = ${$bins_ddg}{$bin}\n";
+   }
+
+}
+##need to add distance from start and end of intergenic region
+
 print "is there a preference for the distance from the start of the feature in which mping is inserted?\n";
 print "inserts in features are binned by distance from start of feature\n";
 foreach my $type (sort keys %insert_dfs){

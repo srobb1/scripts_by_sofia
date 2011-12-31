@@ -15,8 +15,8 @@ my $tempDir = defined $ARGV[2] ? $ARGV[2]  : '/scratch';
 my $current     = File::Spec->curdir();
 my $current_dir = File::Spec->rel2abs($current);
 
-my $start_host = `hostname`;
-$start_host =~ s/\s+//g;
+#my $start_host = `hostname`;
+#$start_host =~ s/\s+//g;
 
 my @dirs = split '/' , $dir_path;
 my $lowest_dir = pop @dirs;
@@ -29,8 +29,6 @@ print SH "#!/bin/bash\n\n";
 
 print SH "tmp_dir=`mktemp --tmpdir=$tempDir -d`\n";
 print SH "cd \$tmp_dir\n";
-
-
 
 #merge bam files
 print SH "samtools merge \$tmp_dir/$lowest_dir.merged.bam $dir_path/*bam\n";
@@ -48,6 +46,7 @@ print SH "samtools index  \$tmp_dir/$lowest_dir.merged.sorted.bam\n";
 print SH "samtools view -h \$tmp_dir/$lowest_dir.merged.sorted.bam -o \$tmp_dir/$lowest_dir.merged.sorted.sam\n";
 #`samtools view -h $one_up/$lowest_dir.merged.sorted.bam -o $two_up/sam_split_by_chromosome/$lowest_dir.merged.sorted.sam`;
 
+print SH "if [ ! -d \"$two_up/sam_split_by_chromosome\" ]; then mkdir $two_up/sam_split_by_chromosome ; fi\n";
 print SH "for i in `ls *.sam*` ; do cp \$tmp_dir/\$i $two_up/sam_split_by_chromosome/$prefix\$i ; done\n";
 print SH "for i in `ls *.bam*` ; do cp \$tmp_dir/\$i $one_up/$prefix\$i ; done\n";
 print SH "cd $current_dir\n";
