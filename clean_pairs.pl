@@ -26,11 +26,11 @@ sub getHelp () {
 This script takes 2 paired fastq files and matches mates and prints unPaired reads to STDOUT. 
 Please name the fastq files with .fq extention.
 usage:
-./cleanUp_Pairs.pl [-1 fastq file 1] [-2 fastq file 2][-h] 
+./clean_pairs.pl [-1 fastq file 1] [-2 fastq file 2][-h] 
 
 options:
--1 STR          sam file 1 [required, no default]
--2 STR          sam file 2 [required, no default]
+-1 STR          fq file 1 [required, no default]
+-2 STR          fq file 2 [required, no default]
 -h              this message
 ";
     exit 1;

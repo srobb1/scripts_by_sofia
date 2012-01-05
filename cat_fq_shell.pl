@@ -7,7 +7,9 @@ use File::Spec;
 ## for i in `ls` ; do cat_fq_shell.pl $i prefix; done
 my $dir = shift;
 my $prefix = shift;
+my $clean = shift;
 $prefix = !defined $prefix ? '' : $prefix . '.';
+@clean = !defined $clean ? 1 : 0;
 my $dir_path = File::Spec->rel2abs($dir);
 
 my $tempDir = defined $ARGV[2] ? $ARGV[2]  : '/scratch';
@@ -30,8 +32,14 @@ my $unpaired = "$lowest_dir"."_unPaired.fq";
 
 print SH "cat $dir_path/*_1.fq > \$tmp_dir/$mate_1\n"; 
 print SH "cat $dir_path/*_2.fq > \$tmp_dir/$mate_2\n"; 
-print SH "cat $dir_path/*unPaired.fq >  \$tmp_dir/$unpaired\n";
+print SH "cat $dir_path/*unPaired.fq >  \$tmp_dir/$unpaired.tmp\n";
 
+if ($clean){
+  print SH "clean_pairs.pl \$tmp_dir/$mate_1 \$tmp_dir/$mate_2 > \$tmp_dir/$unpaired.tmp2\n";
+  print SH "cat \$tmp_dir/$unpaired.tmp \$tmp_dir/$unpaired.tmp2 > \$tmp_dir/$unpaired\n";
+  $mate_1 = "$lowest_dir"."_1.matched.fq"; 
+  $mate_2 = "$lowest_dir"."_2.matched.fq"; 
+}
 print SH "cp \$tmp_dir/$mate_1 $one_up/$prefix$mate_1\n";
 print SH "cp \$tmp_dir/$mate_2 $one_up/$prefix$mate_2\n";
 print SH "if [ -s \$tmp_dir/$unpaired  ] ; then  cp \$tmp_dir/$unpaired $one_up/$prefix$unpaired ; fi\n";

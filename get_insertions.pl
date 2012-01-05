@@ -248,7 +248,47 @@ foreach my $ref (sort keys %each){
    }
 
 }
-##need to add distance from start and end of intergenic region
+{
+   my @dfs = @{$intergenic{gt_5000}{dfs}};
+   my $partitions = [1000,5000,100000];
+   my $stat_dfs = Statistics::Descriptive::Full->new();
+   $stat_dfs->add_data(@dfs);
+   my $bins_dfs = $stat_dfs->frequency_distribution_ref($partitions);
+
+   print "**intergenic gt 5000:distance from upstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_dfs}){
+     print "\t\t$bin\tcount = ${$bins_dfs}{$bin}\n";
+   }
+   my @dfe = @{$intergenic{gt_5000}{dfe}};
+   my $stat_dfe = Statistics::Descriptive::Full->new();
+   $stat_dfe->add_data(@dfe);
+   my $bins_dfe = $stat_dfe->frequency_distribution_ref($partitions);
+
+   print "**intergenic gt 5000:distance from downstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_dfe}){
+     print "\t\t$bin\tcount = ${$bins_dfe}{$bin}\n";
+   }
+
+   @dfs = @{$intergenic{lt_5000}{dfs}};
+   $partitions = [1000,5000,100000];
+   $stat_dfs = Statistics::Descriptive::Full->new();
+   $stat_dfs->add_data(@dfs);
+   $bins_dfs = $stat_dfs->frequency_distribution_ref($partitions);
+
+   print "**intergenic lt 5000:distance from upstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_dfs}){
+     print "\t\t$bin\tcount = ${$bins_dfs}{$bin}\n";
+   }
+   @dfe = @{$intergenic{lt_5000}{dfe}};
+   $stat_dfe = Statistics::Descriptive::Full->new();
+   $stat_dfe->add_data(@dfe);
+   $bins_dfe = $stat_dfe->frequency_distribution_ref($partitions);
+
+   print "**intergenic lt 5000:distance from downstream gene\n";
+   foreach my $bin (sort {$a <=> $b} keys %{$bins_dfe}){
+     print "\t\t$bin\tcount = ${$bins_dfe}{$bin}\n";
+   }
+}
 
 print "is there a preference for the distance from the start of the feature in which mping is inserted?\n";
 print "inserts in features are binned by distance from start of feature\n";
