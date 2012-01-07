@@ -106,6 +106,7 @@ foreach my $feature (@features_type) {
       $each{$ref}{$start}{$type}{dfe}=$distance_from_end;
       $each{$ref}{$start}{$type}{feat_len}=$f_len;
       $each{$ref}{$start}{$type}{insert_type}=$insert_type;
+      $each{$ref}{$start}{$type}{f_strand}=$f_strand;
       if ($type eq 'intergenic'){
         $each{$ref}{$start}{$type}{gene2right}=$gene2right;
         $each{$ref}{$start}{$type}{gene2left}=$gene2left;
@@ -172,7 +173,7 @@ foreach my $type (sort keys %inserts){
 }
 
 print "is there a preference for the distance from the start of the feature in which mping is inserted?\n";
-my $toPrint = "souce\tref\tinsert_type\tinsert_feature\tstart\tfeat\tf_len\tdfs\tdfe\n";	
+my $toPrint = "souce\tref\tinsert_type\tinsert_feature\tf_len\tdfs\tdfe\trel_pos\tf_strand\n";	
 my %intergenic;
 foreach my $ref (sort keys %each){
   foreach my $start (sort keys %{$each{$ref}}){
@@ -182,13 +183,36 @@ foreach my $ref (sort keys %each){
       my $source = $each{$ref}{$start}{$insert_feature}{source};
       my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
       my $f_len = $each{$ref}{$start}{$insert_feature}{feat_len};
+      my $f_strand = $each{$ref}{$start}{$insert_feature}{f_strand};
       my $rel_pos = $dfs / $f_len ;
-      $toPrint .= "$source\t$ref\t$insert_type\t$insert_feature\t$f_len\t$dfs\t$dfe\t$rel_pos\n";	
       my ($g2r, $g2l) = '';
+      my $orientation;
       if ($insert_feature eq 'intergenic'){
         $g2r = $each{$ref}{$start}{$insert_feature}{gene2right};
         $g2l = $each{$ref}{$start}{$insert_feature}{gene2left};
+        if ($g2l == $g2r){
+          $orientation = 1;
+        }elsif ($g2l > 0 and $g2r < 0){
+          $orientation = 0;
+        }elsif($g2l < 0 and $g2r > 0) {
+          $orientation = 2;
+        }else {
+	  $orientation = "?**$g2l**$g2r**?";
+	}
+	$f_strand = $orientation;
       }
+      $toPrint .= "$source\t$ref\t$insert_type\t$insert_feature\t$f_len\t$dfs\t$dfe\t$rel_pos\t$f_strand\n";	
+      ##need to characterized the intergenic insertion type:
+      ## ---->(+) V (+)----->  tandem: 1 only inserted into 1 5' gene region
+      ## <----(-) V (-)<-----  tandem: 1
+      ## ---->(+) V (-)<-----  convergent: 0
+      ## <----(-) V (+)----->  diverent : 2
+      ##also i need to look at insertions that are not in the 5kb regions before or after a gene     
+
+      ##look at distance from 5' end in tandem intergenic regions, therefor only 1 5'end
+      ##also want to plot the distances from the gene boundries if the intergenic region is inter<5000, 11000<inter>5000, inter>11000
+
+
       if ($insert_feature eq 'intergenic' and $f_len > 5000){
 	## distance from upstream gene
         push @{$intergenic{all}{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
@@ -203,6 +227,28 @@ foreach my $ref (sort keys %each){
         push @{$intergenic{$insert_type}{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
         push @{$intergenic{$insert_type}{gt_5000}{dfe}} , $dfe;
         push @{$intergenic{$insert_type}{gt_5000}{dfs}} , $dfs;
+
+        if ($orientation == 1){
+          push @{$intergenic{all}{gt_5000}{df5_tandem}}, $dfs if $g2l > 0;
+          push @{$intergenic{all}{gt_5000}{df5_tandem}}, $dfe if $g2r > 0;
+          push @{$intergenic{all}{gt_5000}{df3_tandem}}, $dfs if $g2l < 0;
+          push @{$intergenic{all}{gt_5000}{df3_tandem}}, $dfe if $g2r > 0;
+          push @{$intergenic{$insert_type}{gt_5000}{df5_tandem}}, $dfs if $g2l > 0;
+          push @{$intergenic{$insert_type}{gt_5000}{df5_tandem}}, $dfe if $g2r > 0;
+          push @{$intergenic{$insert_type}{gt_5000}{df3_tandem}}, $dfs if $g2l < 0;
+          push @{$intergenic{$insert_type}{gt_5000}{df3_tandem}}, $dfe if $g2r > 0;
+        }elsif($orientation == 2){
+          push @{$intergenic{all}{gt_5000}{dfs_divergent}}, $dfs;
+          push @{$intergenic{all}{gt_5000}{dfe_divergent}}, $dfe;
+          push @{$intergenic{$insert_type}{gt_5000}{dfs_divergent}}, $dfs;
+          push @{$intergenic{$insert_type}{gt_5000}{dfe_divergent}}, $dfe;
+        }elsif ($orientation == 0){
+          push @{$intergenic{all}{gt_5000}{dfs_convergent}}, $dfs;
+          push @{$intergenic{all}{gt_5000}{dfe_convergent}}, $dfe;
+          push @{$intergenic{$insert_type}{gt_5000}{dfs_convergent}}, $dfs;
+          push @{$intergenic{$insert_type}{gt_5000}{dfe_convergent}}, $dfe;
+        }
+
       }elsif ($insert_feature eq 'intergenic' and $f_len < 5000){
         push @{$intergenic{all}{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
         push @{$intergenic{all}{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
@@ -216,7 +262,26 @@ foreach my $ref (sort keys %each){
         push @{$intergenic{$insert_type}{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
         push @{$intergenic{$insert_type}{lt_5000}{dfe}} , $dfe;
         push @{$intergenic{$insert_type}{lt_5000}{dfs}} , $dfs;
-
+        if ($orientation == 1){
+          push @{$intergenic{all}{lt_5000}{df5_tandem}}, $dfs if $g2l > 0;
+          push @{$intergenic{all}{lt_5000}{df5_tandem}}, $dfe if $g2r > 0;
+          push @{$intergenic{all}{lt_5000}{df3_tandem}}, $dfs if $g2l < 0;
+          push @{$intergenic{all}{lt_5000}{df3_tandem}}, $dfe if $g2r > 0;
+          push @{$intergenic{$insert_type}{lt_5000}{df5_tandem}}, $dfs if $g2l > 0;
+          push @{$intergenic{$insert_type}{lt_5000}{df5_tandem}}, $dfe if $g2r > 0;
+          push @{$intergenic{$insert_type}{lt_5000}{df3_tandem}}, $dfs if $g2l < 0;
+          push @{$intergenic{$insert_type}{lt_5000}{df3_tandem}}, $dfe if $g2r > 0;
+        }elsif($orientation == 2){
+          push @{$intergenic{all}{lt_5000}{dfs_divergent}}, $dfs;
+          push @{$intergenic{all}{lt_5000}{dfe_divergent}}, $dfe;
+          push @{$intergenic{$insert_type}{lt_5000}{dfs_divergent}}, $dfs;
+          push @{$intergenic{$insert_type}{lt_5000}{dfe_divergent}}, $dfe;
+        }elsif ($orientation == 0){
+          push @{$intergenic{all}{lt_5000}{dfs_convergent}}, $dfs;
+          push @{$intergenic{all}{lt_5000}{dfe_convergent}}, $dfe;
+          push @{$intergenic{$insert_type}{lt_5000}{dfs_convergent}}, $dfs;
+          push @{$intergenic{$insert_type}{lt_5000}{dfe_convergent}}, $dfe;
+        }
       }
     }
   }
@@ -224,104 +289,79 @@ foreach my $ref (sort keys %each){
 ##distance from up and downstream genes
 my %distance;
 foreach my $i_type ( sort keys %intergenic ) {
-    {
-        my @dug        = @{ $intergenic{$i_type}{gt_5000}{dug} };
-        my $partitions = [ 500, 1000, 2000, 5000, 100000 ];
-        my $stat_dug   = Statistics::Descriptive::Full->new();
-        $stat_dug->add_data(@dug);
-        my $bins_dug = $stat_dug->frequency_distribution_ref($partitions);
+  my @dug        = @{ $intergenic{$i_type}{gt_5000}{dug} };
+  my $partitions = [ 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 50000, 100000 ];
+  my $desc =  "intergenic gt 5000; distance from 5' end of gene:$i_type";
+  my $bins = getBins ($intergenic{$i_type}{gt_5000}{dug},$partitions);   
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic gt 5000; distance from 3' end of gene:$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{ddg},$partitions);   
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from 5' end of gene:$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{dug},$partitions);   
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from 3' end of gene:$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{ddg},$partitions);   
+  add2DistanceHash ($bins,$desc);
+  
 
-        my $desc =  "intergenic gt 5000; distance from upstream gene:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_dug} ) {
-            my $count = ${$bins_dug}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_dug}{$bin}\n";
-        }
-        my @ddg      = @{ $intergenic{$i_type}{gt_5000}{ddg} };
-        my $stat_ddg = Statistics::Descriptive::Full->new();
-        $stat_ddg->add_data(@ddg);
-        my $bins_ddg = $stat_ddg->frequency_distribution_ref($partitions);
+  $desc =  "intergenic gt 5000; distance from 5' end of gene (tandem --> -->):$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{ddg},$partitions);   
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{df5_tandem},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic gt 5000; distance from 3' end of gene (tandem --> -->):$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{df3_tandem},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from 5' end of gene (tandem --> -->):$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{df5_tandem},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from 3' end of gene (tandem --> -->):$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{df3_tandem},$partitions);
+  add2DistanceHash ($bins,$desc);
 
-        $desc = "intergenic gt 5000; distance from downstream gene:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_ddg} ) {
-            my $count = ${$bins_ddg}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_ddg}{$bin}\n";
-        }
 
-        @dug      = @{ $intergenic{$i_type}{lt_5000}{dug} };
-        $stat_dug = Statistics::Descriptive::Full->new();
-        $stat_dug->add_data(@dug);
-        $bins_dug = $stat_dug->frequency_distribution_ref($partitions);
+  $desc =  "intergenic gt 5000; distance from start of intergenic region:$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{dfs},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic gt 5000; distance from end of intergenic region:$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{dfe},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from start of intergenic region:$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{dfs},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from end of intergenic region:$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{dfe},$partitions);
+  add2DistanceHash ($bins,$desc);
 
-        $desc =  "intergenic lt 5000; distance from upstream gene:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_dug} ) {
-            my $count = ${$bins_dug}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_dug}{$bin}\n";
-        }
-        @ddg      = @{ $intergenic{$i_type}{lt_5000}{ddg} };
-        $stat_ddg = Statistics::Descriptive::Full->new();
-        $stat_ddg->add_data(@ddg);
-        $bins_ddg = $stat_ddg->frequency_distribution_ref($partitions);
-
-        $desc =  "intergenic lt 5000; distance from downstream gene:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_ddg} ) {
-            my $count = ${$bins_ddg}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_ddg}{$bin}\n";
-        }
-
-    }
-    {
-        my @dfs        = @{ $intergenic{$i_type}{gt_5000}{dfs} };
-        my $partitions = [ 500, 1000, 2000, 5000, 100000 ];
-        my $stat_dfs   = Statistics::Descriptive::Full->new();
-        $stat_dfs->add_data(@dfs);
-        my $bins_dfs = $stat_dfs->frequency_distribution_ref($partitions);
-
-        my $desc =  "intergenic gt 5000; distance from start of intergenic region:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_dfs} ) {
-            my $count = ${$bins_dfs}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_dfs}{$bin}\n";
-        }
-        my @dfe      = @{ $intergenic{$i_type}{gt_5000}{dfe} };
-        my $stat_dfe = Statistics::Descriptive::Full->new();
-        $stat_dfe->add_data(@dfe);
-        my $bins_dfe = $stat_dfe->frequency_distribution_ref($partitions);
-
-        $desc = "intergenic gt 5000; distance from end of intergenic region:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_dfe} ) {
-            my $count = ${$bins_dfe}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_dfe}{$bin}\n";
-        }
-
-        @dfs        = @{ $intergenic{$i_type}{lt_5000}{dfs} };
-        $partitions = [ 500, 1000, 2000, 5000, 100000 ];
-        $stat_dfs   = Statistics::Descriptive::Full->new();
-        $stat_dfs->add_data(@dfs);
-        $bins_dfs = $stat_dfs->frequency_distribution_ref($partitions);
-
-        $desc = "intergenic lt 5000; distance from start of intergenic region:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_dfs} ) {
-            my $count = ${$bins_dfs}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_dfs}{$bin}\n";
-        }
-        @dfe      = @{ $intergenic{$i_type}{lt_5000}{dfe} };
-        $stat_dfe = Statistics::Descriptive::Full->new();
-        $stat_dfe->add_data(@dfe);
-        $bins_dfe = $stat_dfe->frequency_distribution_ref($partitions);
-
-        $desc = "intergenic lt 5000; distance from end of intergenic region:$i_type";
-        foreach my $bin ( sort { $a <=> $b } keys %{$bins_dfe} ) {
-            my $count = ${$bins_dfe}{$bin};
-            $distance{$desc}{$bin}=$count;
-            #print "\t\t$bin\tcount = ${$bins_dfe}{$bin}\n";
-        }
-    }
+  $desc =  "intergenic gt 5000; distance from start of intergenic region (convergent --> <--):$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{dfs_convergent},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic gt 5000; distance from end of intergenic region (convergent --> <--):$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{dfe_convergent},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from start of intergenic region (convergent --> <--):$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{dfs_convergent},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic lt 5000; distance from end of intergenic region (convergent --> <--):$i_type";
+  $bins = getBins ($intergenic{$i_type}{lt_5000}{dfe_convergent},$partitions);
+  add2DistanceHash ($bins,$desc);
+  
+  $desc =  "intergenic gt 5000; distance from start of intergenic region (divergent <-- -->):$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{dfs_divergent},$partitions);
+  add2DistanceHash ($bins,$desc);
+  $desc =  "intergenic gt 5000; distance from end of intergenic region (divergent <-- -->):$i_type";
+  $bins = getBins ($intergenic{$i_type}{gt_5000}{dfe_divergent},$partitions);
+  add2DistanceHash ($bins,$desc);
+  if (defined $intergenic{$i_type}{lt_5000}{dfs_divergent}){
+    $desc =  "intergenic lt 5000; distance from start of intergenic region (divergent <-- -->):$i_type";
+    $bins = getBins ($intergenic{$i_type}{lt_5000}{dfs_divergent},$partitions);
+    add2DistanceHash ($bins,$desc);
+  }
+  if (defined $intergenic{$i_type}{lt_5000}{dfe_divergent}){
+    $desc =  "intergenic lt 5000; distance from end of intergenic region (divergent <-- -->):$i_type";
+    $bins = getBins ($intergenic{$i_type}{lt_5000}{dfe_divergent},$partitions);
+    add2DistanceHash ($bins,$desc);
+  }
 }
 my @array;
 push @{$array[0]} ,  sort keys %distance;
@@ -339,4 +379,52 @@ print "\t";
 for (my $i=0 ; $i<@array ; $i++){
   print join ("\t", @{$array[$i]}), "\n"; 
 }
+
+print "is there a preference for the distance from the start of the feature in which mping is inserted?\n";
+print "inserts in features are binned by distance from start of feature\n";
+foreach my $type (sort keys %insert_dfs){
+	my @dfs = @{$insert_dfs{$type}};
+	my @dfe = @{$insert_dfe{$type}};
+	#my $partitions = 100;
+	my $partitions = [50,100,150,200,250,350,400,450,500,550,1000,2000,5000];
+	my $stat_dfs = Statistics::Descriptive::Full->new();
+        $stat_dfs->add_data(@dfs);
+        my $bins_dfs = $stat_dfs->frequency_distribution_ref($partitions);	
+
+	my $stat_dfe = Statistics::Descriptive::Full->new();
+        $stat_dfe->add_data(@dfe);
+        my $bins_dfe = $stat_dfe->frequency_distribution_ref($partitions);	
+
+	print "**$type:dfs\n";
+	foreach my $bin (sort {$a <=> $b} keys %{$bins_dfs}){
+       		print "\t\t$bin\tcount = ${$bins_dfs}{$bin}\n";
+   	}
+	print "**$type:dfe\n";
+	foreach my $bin (sort {$a <=> $b} keys %{$bins_dfe}){
+       		print "\t\t$bin\tcount = ${$bins_dfe}{$bin}\n";
+   	}
+}
+
+
 print $toPrint;
+
+
+sub getBins {
+  my $array_ref = shift;
+  my $partitions_ref = shift;
+  my @array        = @{$array_ref}; 
+  my $partitions = $partitions_ref;
+  my $stat   = Statistics::Descriptive::Full->new();
+  $stat->add_data(@array);
+  my $bins = $stat->frequency_distribution_ref($partitions);
+  return $bins;
+}
+
+sub add2DistanceHash { 
+  my $bins = shift;
+  my $desc = shift;
+  foreach my $bin ( sort { $a <=> $b } keys %{$bins} ) {
+    my $count = ${$bins}{$bin};
+    $distance{$desc}{$bin}=$count;
+  }
+}
