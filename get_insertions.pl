@@ -425,20 +425,20 @@ foreach my $i_type ( sort keys %intergenic ) {
    $bins = getBins ($intergenic{$i_type}{lt_5000}{rel},$partitions);
    add2DistanceHash ($bins,$desc,$i_type);
 
-   $desc =  "intergenic gt 5000; relative distance from start of intergenic region (+) (tandem ---> --->)";
+   $desc =  "intergenic gt 5000; relative distance from start of intergenic region (plus tandem ---> --->)";
    $bins = getBins ($intergenic{$i_type}{gt_5000}{rel_tandem_plus},$partitions);
    add2DistanceHash ($bins,$desc,$i_type);
-   $desc =  "intergenic lt 5000; relative distance from start of intergenic region (+) (tandem ---> --->)";
+   $desc =  "intergenic lt 5000; relative distance from start of intergenic region (plus tandem ---> --->)";
    $bins = getBins ($intergenic{$i_type}{lt_5000}{rel_tandem_plus},$partitions);
    add2DistanceHash ($bins,$desc,$i_type);
   
   if (defined $intergenic{$i_type}{gt_5000}{rel_tandem_minus}){
-   $desc =  "intergenic gt 5000; relative distance from start of intergenic region (-) (tandem <--- <---)";
+   $desc =  "intergenic gt 5000; relative distance from start of intergenic region (minus tandem <--- <---)";
    $bins = getBins ($intergenic{$i_type}{gt_5000}{rel_tandem_minus},$partitions);
    add2DistanceHash ($bins,$desc,$i_type);
   }
   if (defined $intergenic{$i_type}{lt_5000}{rel_tandem_minus}){
-   $desc =  "intergenic lt 5000; relative distance from start of intergenic region (-) (tandem <--- <---)";
+   $desc =  "intergenic lt 5000; relative distance from start of intergenic region (minus tandem <--- <---)";
    $bins = getBins ($intergenic{$i_type}{lt_5000}{rel_tandem_minus},$partitions);
    add2DistanceHash ($bins,$desc,$i_type);
   }
@@ -477,11 +477,31 @@ foreach my $i_type ( sort keys %intergenic ) {
 #      #$i++;
 #    }
 #}
-#open OUTR, ">r.test";
 
 
 print "inserts/bp per bin\n";
 foreach my $desc ( sort keys %distance ) {
+  my $fn = $desc;
+  my $title = $desc;
+  $fn =~ s/\W//g;
+  $fn =~ s/\s//g;
+  $title =~s/\;/\n/;
+  $title =~s/\(/\n/;
+  $title =~s/\)//;
+  my $r_script = $fn.".R.sh";
+  my $r_data = $fn."R.data";
+  open OUTRSH, ">$r_script";
+  open OUTRDATA, ">$r_data";
+  print OUTRSH ' 
+library(lattice)
+dtlong <- read.table(file="',$r_data,'", header=TRUE, sep="\t")
+dtlong$bin = ordered(dtlong$bin)
+png(filename="',$fn,'.png",height=500, width=600, bg="white")
+xyplot(inserts_per_bp_interval~bin,groups=insert_type,data=dtlong,type="l",auto.key=list(lines=TRUE,title="',$title,'"),xlab="distance in bp",ylab="inserts per bp per interval")
+dev.off()
+';
+  print OUTRDATA "insert_type\tbin\tinserts_per_bp_interval\n";
+    my $i++;
     print "$desc\n";
     my $last_bin = 0;
     foreach my $bin ( sort { $a <=> $b } keys %{ $distance{$desc} } ){
@@ -493,6 +513,7 @@ foreach my $desc ( sort keys %distance ) {
     
         print "$bin\t" if $type_count == 1;
         my $count = $distance{$desc}{$bin}{$type};
+=cut
         my $sub_type;
         if ($desc =~ /gt 5000/){
           $sub_type = 'gt_5000'
@@ -509,7 +530,6 @@ foreach my $desc ( sort keys %distance ) {
         }
       }
 #        print "$bin--$features_this_size_or_smaller \t" if $type_count == 1;
-=cut
       my $insert_per_bp_per_bin =0;
       if (defined $features_this_size_or_smaller and $features_this_size_or_smaller > 0){
         $insert_per_bp_per_bin = $count / ( $bin - $last_bin ) / $features_this_size_or_smaller;
@@ -517,8 +537,10 @@ foreach my $desc ( sort keys %distance ) {
 =cut
         my $insert_per_bp_per_bin = $count / ( $bin - $last_bin );
         if ($desc =~ /relative/){
+	  print OUTRDATA "$type\t$bin\t$count\n";
           print "$count";
         }else{
+	  print OUTRDATA "$type\t$bin\t$insert_per_bp_per_bin\n";
           print $insert_per_bp_per_bin;
         }
         if ( $type_count == scalar @types ) {
