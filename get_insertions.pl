@@ -414,7 +414,7 @@ foreach my $i_type ( sort keys %intergenic ) {
   push @data, [$intergenic{$i_type}{all_intergenic}{rel_tandem_plus}, "all intergenic; relative distance from start of intergenic region (plus tandem ---> --->)",$partitions,$i_type];
   push @data, [$intergenic{$i_type}{all_intergenic}{rel_tandem_minus},"all intergenic; relative distance from start of intergenic region (minus tandem <--- <---)",$partitions,$i_type];
   push @data, [$intergenic{$i_type}{all_intergenic}{rel_convergent},"all intergenic; relative distance from start of intergenic region (convergent ---> <---)",$partitions,$i_type];
-  push @data, [$intergenic{$i_type}{all_intergenic}{rel_divergent},"all intergenic; relative distance from start of intergenic region (<--- --->)",$partitions,$i_type];
+  push @data, [$intergenic{$i_type}{all_intergenic}{rel_divergent},"all intergenic; relative distance from start of intergenic region (divergent <--- --->)",$partitions,$i_type];
   $partitions = [ 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 50000, 100000 ];
   push @data, [$intergenic{$i_type}{gt_5000}{dug}, "intergenic gt 5000; distance from 5' end of gene" , $partitions,$i_type];
   push @data, [$intergenic{$i_type}{gt_5000}{ddg},"intergenic gt 5000; distance from 3' end of gene",$partitions,$i_type]; 
@@ -445,8 +445,8 @@ foreach my $i_type ( sort keys %intergenic ) {
   push @data, [$intergenic{$i_type}{lt_5000}{rel_tandem_minus},"intergenic lt 5000; relative distance from start of intergenic region (minus tandem <--- <---)",$partitions,$i_type];
   push @data, [$intergenic{$i_type}{gt_5000}{rel_convergent},"intergenic gt 5000; relative distance from start of intergenic region (convergent ---> <---)",$partitions,$i_type];
   push @data, [$intergenic{$i_type}{lt_5000}{rel_convergent},"intergenic lt 5000; relative distance from start of intergenic region (convergent ---> <---)",$partitions,$i_type];
-  push @data, [$intergenic{$i_type}{gt_5000}{rel_divergent},"intergenic gt 5000; relative distance from start of intergenic region (<--- --->)",$partitions,$i_type];
-  push @data, [$intergenic{$i_type}{lt_5000}{rel_divergent},"intergenic lt 5000; relative distance from start of intergenic region (<--- --->)",$partitions,$i_type];
+  push @data, [$intergenic{$i_type}{gt_5000}{rel_divergent},"intergenic gt 5000; relative distance from start of intergenic region (divergent <--- --->)",$partitions,$i_type];
+  push @data, [$intergenic{$i_type}{lt_5000}{rel_divergent},"intergenic lt 5000; relative distance from start of intergenic region (divergent <--- --->)",$partitions,$i_type];
 }
   
   foreach my $set(@data){
