@@ -48,6 +48,7 @@ else {
     $current_dir = cwd();
 }
 my $mapping = 1;
+
 if ( !defined $genomeFasta ) {
     print "\n\nPlease provide reference genome by using -g Genome fasta path\n";
     &getHelp();
@@ -112,9 +113,9 @@ elsif ( !-e $te_fasta ) {
 }
 else {
     my $first_line = `head -n1 $te_fasta`;
-    if ( $first_line !~ /^>\S+\s+\S+/ ) {
+    if ( $first_line !~ /^>\S+\s+TSD=\S+/ ) {
         die
-"The TE_fasta:$te_fasta does not have the proper format:\n>TE_NAME TSD\nSEQUENCE\n";
+"The TE_fasta:$te_fasta does not have the proper format:\n>TE_NAME TSD=TSD\nSEQUENCE\n";
     }
 }
 my @fq_files;
@@ -148,7 +149,7 @@ options:
 
 **required:
 -g STR          single chromosome genome fasta file path [no default]
--t STR          fasta containing 1 or more nucleotide sequences of transposable elements with TSD in the desc [no default]
+-t STR          fasta containing 1 or more nucleotide sequences of transposable elements with TSD=xxx in the desc [no default]
 -d STR          directory of paired and unpaired fastq files (paired _1.fq & _2.fq) (.fq or .fastq is acceptable)  [no default]
 
 **recommended:
@@ -164,7 +165,7 @@ options:
 -h              this message
 
 SAMPLE TE FASTA
->mping TTA
+>mping TSD=TTA
 GGCCAGTCACAATGGGGGTTTCACTGGTGTGTCATGCACATTTAATAGGGGTAAGACTGAATAAAAAATG
 ATTATTTGCATGAAATGGGGATGAGAGAGAAGGAAAGAGTTTCATCCTGGTGAAACTCGTCAGCGTCGTT
 TCCAAGTCCTCGGTAACAGAGTGAAACCCCCGTTGAGGCCGATTCGTTTCATTCACCGGATCTCTTGCGT
@@ -194,11 +195,7 @@ if ( !-e "$genome_dir/$genome_file.bowtie_build_index.1.ebwt" and $mapping ) {
 my @fq;
 my @fa;
 
-#foreach my $ref_fq_files ( keys %fq_files ) {
-
 foreach my $fq (@fq_files) {
-
-    #foreach my $fq ( @{ $fq_files{$ref_fq_files} } ) {
     my $fq_path = File::Spec->rel2abs($fq);
     push @fq, $fq_path;
     my $fa = $fq;
@@ -208,7 +205,6 @@ foreach my $fq (@fq_files) {
             open INFQ,  $fq_path or die $!;
             open OUTFA, ">$fa"   or die $!;
 
-            #print "converting fq to fa $fq -> $fa\n";
             while ( my $header = <INFQ> ) {
                 my $seq         = <INFQ>;
                 my $qual_header = <INFQ>;
@@ -256,7 +252,7 @@ my $top_dir = $mday . $mon . $year . "_teSearch";
 open( INFASTA, "$te_fasta" ) || die "$!\n";
 my $i = 0;
 while ( my $line = <INFASTA> ) {
-    if ( $line =~ /^>(\S+)\s+(\S+)/ ) {
+    if ( $line =~ /^>(\S+)\s+TSD=(\S+)/ ) {
         my $id = $1;
         $TSD{$id} = $2;
         if ( $i > 0 ) {
@@ -271,8 +267,10 @@ while ( my $line = <INFASTA> ) {
         open( OUTFASTA, ">$te_dir/$te_file" ) or die "$!\n";
         print OUTFASTA $line;
         $i++;
+    }elsif ($line =~/^>/ and $line !~ /TSD=/){
+        die  "The TE_fasta:$te_fasta does not have the proper format:\n>TE_NAME TSD=TSD\nSEQUENCE\n";
     }
-    else {
+    else {  ##should be sequence
         print OUTFASTA $line;
     }
 }
