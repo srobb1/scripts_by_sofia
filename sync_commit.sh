@@ -3,7 +3,6 @@
 echo "----------" >> ~/sync_commit.log
 date >> ~/sync_commit.log
 echo "---------" >> ~/sync_commit.log
-cd ~/src/scripts_by_sofia
 
 ##scripts_by_sofia
 rsync -uL ~/bin/* ~/src/scripts_by_sofia/.
@@ -19,6 +18,13 @@ rsync -uL ~/bin/gff_and_seqfeaturestore_scripts/* ~/src/TEamRice/gff_and_seqfeat
 rsync -uL ~/bin/process_raw_paired_reads_2_split_by_target/* ~/src/TEamRice/process_raw_paired_reads_2_split_by_target/.
 
 
+cd ~/src/scripts_by_sofia
+/usr/local/bin/git add *
+/usr/local/bin/git status >> ~/sync_commit.log
+/usr/local/bin/git commit -m 'daily commit of any changes to all scritps'
+/usr/local/bin/git push
+
+cd ~/src/TEamRice
 /usr/local/bin/git add *
 /usr/local/bin/git status >> ~/sync_commit.log
 /usr/local/bin/git commit -m 'daily commit of any changes to all scritps'
