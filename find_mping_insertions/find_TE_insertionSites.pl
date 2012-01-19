@@ -192,6 +192,7 @@ if ( !-e "$genome_dir/$genome_file.bowtie_build_index.1.ebwt" and $mapping ) {
 #create an index of genome fasta
 `samtools faidx $genome_path`;
 
+#convert fq files to fa for blat
 my @fq;
 my @fa;
 
@@ -228,6 +229,8 @@ foreach my $fq (@fq_files) {
 }
 
 #split TE fasta into single record fastas
+
+#count the number of sequences
 my $num = 0;
 open( INFASTA, "$te_fasta" ) || die "$!\n";
 while ( my $line = <INFASTA> ) {
@@ -297,7 +300,10 @@ foreach my $te_path (@te_fastas) {
         my @fa_path = split '/', $fa;
         my $fa_name = pop @fa_path;
         $fa_name =~ s/\.fa$//;
-
+        
+        ##create a directory for each genome seq
+        #$path = "$path/$fa_name";
+        #`mkdir -p $path`;
 `blat -minScore=10 -tileSize=7 $path/$te_fasta $fa $path/$fa_name.te_$TE.blatout`
           if !-e "$path/$fa_name.te_$TE.blatout";
 
