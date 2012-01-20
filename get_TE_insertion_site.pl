@@ -93,17 +93,25 @@ foreach my $line (@sorted_sam) {
 
 my $event = 0;
 my @path = split '/' , $sorted_bam;
-pop @path; #throw out filename
+my $bam_file_name = pop @path; #throw out filename
 my $path = join '/' , @path;
-open OUTFASTA, ">$path/$usr_target.$TE.te_insertion_sites.fa"         or die $!;
-open OUTALL,   ">$path/$usr_target.$TE.te_insertion.all.txt"         or die $!;
-open OUTGFF,   ">$path/$usr_target.$TE.te_insertion_sites.gff"        or die $!;
-open OUTTABLE, ">$path/$usr_target.$TE.te_insertion_sites.table.txt"  or die $!;
-open OUTLIST,  ">$path/$usr_target.$TE.te_insertion_sites.reads.list" or die $!;
+my $ref_dir = pop @path;
+my $te_dir = pop @path;
+my $top_dir_path = join '/' , @path;
+my $results_dir = "$top_dir_path/results";
+`mkdir -p $results_dir`;
+#$results_dir = $path; ####tmp until this run is done
+open OUTFASTA, ">$results_dir/$usr_target.$TE.te_insertion_sites.fa"         or die $!;
+open OUTALL,   ">$results_dir/$usr_target.$TE.te_insertion.all.txt"         or die $!;
+open OUTGFF,   ">$results_dir/$usr_target.$TE.te_insertion_sites.gff"        or die $!;
+open OUTTABLE, ">$results_dir/$usr_target.$TE.te_insertion_sites.table.txt"  or die $!;
+open OUTLIST,  ">$results_dir/$usr_target.$TE.te_insertion_sites.reads.list" or die $!;
+open OUTALLTABLE, ">>$results_dir/all.$TE.te_insertion_sites.table.txt"  or die $!;
 print OUTGFF "##gff-version	3\n";
 ##output for students in tab delimited table
-print OUTTABLE
-"TE\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\n";
+my $tableHeader = "TE\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\n";
+print OUTTABLE $tableHeader;
+print OUTALLTABLE $tableHeader if -s "$results_dir/all.$TE.te_insertion_sites.table.txt" < 100;
 
 foreach my $insertionEvent ( sort { $a <=> $b } keys %teInsertions ) {
     foreach my $start (
@@ -128,8 +136,9 @@ foreach my $insertionEvent ( sort { $a <=> $b } keys %teInsertions ) {
               $flank_len;
             my $right_flanking_ref_seq = substr $genome_seq,
               $zero_base_coor + 1, $flank_len;
-            print OUTTABLE
-"$TE\t$exper\t$usr_target\t$coor\t$left_count\t$right_count\t$left_flanking_ref_seq\t$right_flanking_ref_seq\n";
+my $tableLine = "$TE\t$exper\t$usr_target\t$coor\t$left_count\t$right_count\t$left_flanking_ref_seq\t$right_flanking_ref_seq\n";
+            print OUTTABLE $tableLine;
+            print OUTALLTABLE $tableLine;
             print OUTGFF
 "$usr_target\t$exper\ttransposable_element_insertion_site\t$coor\t$coor\t.\t.\t.\tID=$TE.te_insertion_site.$usr_target.$coor; left_flanking_read_count=$left_count; right_flanking_read_count=$right_count; left_flanking_seq=$left_flanking_ref_seq; right_flanking_seq=$right_flanking_ref_seq\n";
             print OUTFASTA
