@@ -155,6 +155,12 @@ GTGACTGGCC
 
     exit 1;
 }
+
+
+my $te_path = File::Spec->rel2abs($te_fasta);
+my $top_dir = $outdir;
+
+
 ##split genome file into individual fasta files
 my @genome_fastas;
 if ($mapping){
@@ -164,7 +170,10 @@ if ($mapping){
   while ( my $line = <INFASTA> ) {
     if ( $line =~ /^>(\S+)/ ) {
       my $id = $1;
-      $id =~ s/\W/_/g;
+      if ($id =~ /\|/){
+        $id =~ s/\|/_/g;
+        $line =~ s/\|/_/g;
+      }
       if ( $i > 0 ) {
         close(OUTFASTA);
         $i = 0;
@@ -189,17 +198,37 @@ $line\n";
   close(INFASTA);
   close(OUTFASTA);
   foreach my $genome_file (@genome_fastas){
-    if ( !-e "$genome_file.bowtie_build_index.1.ebwt" and $mapping ) {
-      `bowtie-build -f $genome_file $genome_file.bowtie_build_index`;
+    my @cmds;
+    if ( !-e "$genome_file.bowtie_build_index.1.ebwt") {
+      push @cmds , "bowtie-build -f $genome_file $genome_file.bowtie_build_index";
     }
     #create an index of genome fasta
-    if ( !-e "$genome_file.fai" and $mapping ) {
-      `samtools faidx $genome_file`;
+    if ( !-e "$genome_file.fai") {
+      push @cmds, "samtools faidx $genome_file";
+    }
+    $genome_file =~ /.+\/(.+)\.fa$/; 
+    my $ref = $1;
+    if ($parallel and @cmds){ 
+      my $shell_dir = "$current_dir/$top_dir/shellscripts/step_1";
+      `mkdir -p $shell_dir`;
+      open OUTSH , ">$shell_dir/$ref.formatGenome.sh";
+      my $cmd = join "\n" , @cmds;
+      print OUTSH "$cmd\n";
+      close OUTSH;
+    }elsif ($parallel and !@cmds){
+      my $step2_file = "$current_dir/$top_dir/shellscripts/step_1_not_needed_genomefasta_already_formated";
+      my $shell_dir = "$current_dir/$top_dir/shellscripts";
+      `mkdir -p $shell_dir`;
+      `touch $step2_file` if $parallel;
+    }elsif (@cmds) {
+      ##run them serierally now
+      foreach my $cmd (@cmds){
+        `$cmd`;
+      }
     }
   }
 }##end if($mapping)
 
-my $te_path = File::Spec->rel2abs($te_fasta);
 #convert fq files to fa for blat
 my @fq;
 my @fa;
@@ -211,28 +240,28 @@ foreach my $fq (@fq_files) {
     if ( $fa =~ s/\.(fq|fastq)$/.fa/ ) {
         push @fa, $fa;
         if ( !-e $fa ) {
-            open INFQ,  $fq_path or die $!;
-            open OUTFA, ">$fa"   or die $!;
-
-            while ( my $header = <INFQ> ) {
-                my $seq         = <INFQ>;
-                my $qual_header = <INFQ>;
-                my $qual        = <INFQ>;
-
-                die "ERROR: expected \'\@\' but saw $header"
-                  if substr( $header, 0, 1 ) ne '@';
-
-                print OUTFA ">", substr( $header, 1 );
-                print OUTFA $seq;
-            }
-            close INFQ;
-            close OUTFA;
+           my $cmd = "$scripts/relocaTE_fq2fa.pl $fq_path $fa";
+           if ($parallel){
+             my @fq_path = split '/' , $fq_path;
+             my $fq_name = pop @fq_path;
+             my $shell_dir = "$current_dir/$top_dir/shellscripts/step_2";
+             `mkdir -p $shell_dir`;
+             my $outsh = ">$shell_dir/$fq_name"."2fa.blat.sh";
+             open OUTSH , ">$outsh";
+             print OUTSH "$cmd\n";
+           }else {
+             `$cmd`;
+           }           
+        }else {
+             my $shell_dir = "$current_dir/$top_dir/shellscripts";
+             `mkdir -p $shell_dir`;
+             my $step2_file = "$current_dir/$top_dir/shellscripts/step_2_not_needed_fq_already_converted_2_fa";
+             `touch $step2_file` if $parallel;
         }
-    }
-    else {
-        print
+    }else {
+      print
 "$fq does not seem to be a fastq based on the file extension. It should be fq or fastq\n";
-        &getHelp();
+      &getHelp();
     }
 }
 
@@ -242,7 +271,6 @@ my %TSD;
 
 ##put in a new directory structure workingDir/date-te-search/tefilename/all-newly-created-files
 ##create new te fasta file
-my $top_dir = $outdir;
 open( INFASTA, "$te_fasta" ) || die "$!\n";
 my $i = 0;
 while ( my $line = <INFASTA> ) {
@@ -280,6 +308,8 @@ foreach my $te_path (@te_fastas) {
   $TE =~ s/\.fa//;
   `mkdir -p $path/blat_output`;
   `mkdir -p $path/flanking_seq`;
+  `mkdir -p $path/te_containing_fq`;
+  `mkdir -p $path/te_only_read_portions_fa`;
 
   #blat fa files against te.fa
   my @flanking_fq;
@@ -292,33 +322,46 @@ foreach my $te_path (@te_fastas) {
       my @fa_path = split '/', $fa;
       my $fa_name = pop @fa_path;
       $fa_name =~ s/\.fa$//;
-      
-`blat -minScore=10 -tileSize=7 $te_path $fa $path/blat_output/$fa_name.te_$TE.blatout`
-        if !-e "$path/blat_output/$fa_name.te_$TE.blatout";
-
+      if ($parallel){
+        my $shell_dir = "$current_dir/$top_dir/shellscripts/step_3";
+        `mkdir -p $shell_dir`;
+        open OUTSH , ">$shell_dir/$TE.$fa_name.blat.sh";
+      }
+      if (!-e "$path/blat_output/$fa_name.te_$TE.blatout"){
+        my $cmd = "blat -minScore=10 -tileSize=7 $te_path $fa $path/blat_output/$fa_name.te_$TE.blatout";
+        print OUTSH "$cmd\n" if $parallel;
+        `$cmd` if !$parallel;
+      }
+     
       #my $file_num         = $i + 1;
-      my $te_Containing_fq = "$path/$fa_name.te_$TE.ContainingReads.fq";
+      my $te_Containing_fq = "$path/te_containing_fq/$fa_name.te_$TE.ContainingReads.fq";
       if ( -e $te_Containing_fq ) {
           $fq = $te_Containing_fq;
       }
-`perl $scripts/get_fq_of_te_trimmed_te_matching_reads.pl $path/blat_output/$fa_name.te_$TE.blatout $fq $len_cutoff $mismatch_allowance > $path/flanking_seq/$fa_name.te_$TE.flankingReads.fq `;
+my $cmd = "perl $scripts/get_fq_of_te_trimmed_te_matching_reads.pl $path/blat_output/$fa_name.te_$TE.blatout $fq $len_cutoff $mismatch_allowance > $path/flanking_seq/$fa_name.te_$TE.flankingReads.fq";
+      if ($parallel){
+        print OUTSH "$cmd\n";
+        close OUTSH;
+      }else{
+        `$cmd` if !$parallel;
+      }
   }
 
   if ($mapping){
     foreach my $genome_file (@genome_fastas){
       my $param_path = "$current_dir/$top_dir/$TE";
-      my $outregex = "$current_dir/$top_dir/regex.txt";
+      my $outregex = "$param_path/regex.txt";
       open OUTREGEX , ">$outregex" or die $!;
       print OUTREGEX "$mate_file_1\t$mate_file_2\t$mate_file_unpaired\t$TSD{$TE}";
       my $cmd = "$scripts/relocaTE_process.pl $scripts $param_path $genome_file $outregex $TE $exper";
       if (!$parallel){
         `$cmd`;
       }else {
-        my $shell_dir = "$current_dir/$top_dir/shellscripts";
+        my $shell_dir = "$current_dir/$top_dir/shellscripts/step_4";
         $genome_file =~ /.+\/(.+)\.fa$/; 
         my $ref = $1;
         `mkdir -p $shell_dir`;
-        open OUTSH , ">$shell_dir/$TE.$ref.sh";
+        open OUTSH , ">$shell_dir/$TE.$ref.findSites.sh";
         print OUTSH "$cmd\n";
         close OUTSH;
       }

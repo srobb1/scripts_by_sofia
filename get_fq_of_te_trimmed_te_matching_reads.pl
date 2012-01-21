@@ -67,7 +67,13 @@ while ( my $line = <INBLAT> ) {
 }
 
 open INFQ, $fq_file_1 or die $!;
-my ( $filename, $directories, $suffix ) = fileparse( $blat_file, qr/\.[^.]*/ );
+my @blat_path = split '/' , $blat_file;
+my $filename = pop @blat_path;
+my $blat_path = join '/' , @blat_path;
+pop @blat_path;
+my $te_path = join '/' , @blat_path;
+
+#my ( $filename, $directories, $suffix ) = fileparse( $blat_file, qr/\.[^.]*/ );
 my $TE = "unspecified";
 my $FA = "unspecified";
 #$fa.te_$TE.blatout
@@ -79,18 +85,20 @@ if ($filename =~ /(\S+)\.te_(\S+)/){
 my $outfq = 0;
 my $outte5 = 0;
 my $outte3 = 0;
-if (-e "$directories$FA.te_$TE.ContainingReads.fq"){
+my $out_fq_path = "$te_path/te_containing_fq";
+my $out_fa_path = "$te_path/te_only_read_portions_fa";
+if (-e "$out_fq_path/$FA.te_$TE.ContainingReads.fq"){
 	$outfq = 1;
 }
-if (-e "$directories$FA.te_$TE.five_prime.fa"){
+if (-e "$out_fa_path/$FA.te_$TE.five_prime.fa"){
 	$outte5 = 1;
 }
-if (-e "$directories$FA.te_$TE.three_prime.fa"){
+if (-e "$out_fa_path/$FA.te_$TE.three_prime.fa"){
 	$outte3 = 1;
 }
-open OUTFQ,     ">$directories$FA.te_$TE.ContainingReads.fq" if !$outfq;
-open OUTTE5, ">$directories$FA.te_$TE.five_prime.fa" if !$outte5;
-open OUTTE3, ">$directories$FA.te_$TE.three_prime.fa" if !$outte3;
+open OUTFQ,     ">$out_fq_path/$FA.te_$TE.ContainingReads.fq" if !$outfq;
+open OUTTE5, ">$out_fa_path/$FA.te_$TE.five_prime.fa" if !$outte5;
+open OUTTE3, ">$out_fa_path/$FA.te_$TE.three_prime.fa" if !$outte3;
 while ( my $line = <INFQ> ) {
     chomp $line;
     my $header = $line;
