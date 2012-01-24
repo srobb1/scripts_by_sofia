@@ -99,6 +99,7 @@ while ( my $seqObj = $seqIO_obj->next_seq ) {
             and ($mismatch / $len ) <= $mismatch_allowance  
           ) 
         {
+            $header .= " 5prime";
 	    my ( $tS, $tE, $qS, $qE ) =
               ( $tStart + 1, $tEnd + 1, $start + 1, $end + 1 );
 	    if ($strand eq '-'){
@@ -116,6 +117,7 @@ while ( my $seqObj = $seqIO_obj->next_seq ) {
             and ($mismatch / $len ) <= $mismatch_allowance  
           ) ##keep for later: allow a few mismatches## or ($mismatch / $len ) < 0.1 ) ) or ( $mismatch / $len < 0.1 ) ) )
         {
+            $header .= " 3prime";
             my ( $tS, $tE, $qS, $qE ) =
               ( $tStart + 1, $tEnd + 1, $start + 1, $end + 1 );
 	      if ($strand eq '-'){

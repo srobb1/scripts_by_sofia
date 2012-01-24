@@ -4,7 +4,7 @@ use strict;
 use File::Spec;
 #provide a directory of bam files to merge
 # ex: a directory for one chromosome
-# for i in `seq 1 12` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl  Chr$i ; done
+# for i in `seq 1 12` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl  Chr$i HEG4_25x; done
 #  or
 # for i in `ls` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl $i EG4_500bp; done
 my $dir = shift;

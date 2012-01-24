@@ -77,7 +77,8 @@ my $te_path = join '/' , @blat_path;
 my $TE = "unspecified";
 my $FA = "unspecified";
 #$fa.te_$TE.blatout
-if ($filename =~ /(\S+)\.te_(\S+)/){
+#if ($filename =~ /(\S+)\.te_(\S+)/){
+if ($filename =~ /(\S+)\.te_(\S+)\.blatout/){
 	$FA = $1;
 	$TE = $2;
 }

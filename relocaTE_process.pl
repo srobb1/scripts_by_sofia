@@ -157,4 +157,4 @@ else {
 `samtools index $path/bowtie_aln/$target.$TE.merged.sorted.bam 2>> $path/$target.stderr`;
 
 #identify mping insertion sites
-`$scripts/get_TE_insertion_site.pl $path/bowtie_aln/$target.$TE.merged.sorted.bam $target $genome_file $TE $TSD $exper`;
+`$scripts/relocaTE_insertionFinder.pl $path/bowtie_aln/$target.$TE.merged.sorted.bam $target $genome_file $TE $TSD $exper`;
