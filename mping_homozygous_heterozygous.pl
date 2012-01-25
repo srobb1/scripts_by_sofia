@@ -1,4 +1,6 @@
 #!/usr/bin/perl -w
+use strict;
+use Cwd;
 ## script take output from find_TE_insertion.pl pipeline : ***.te_insertion.all.txt 
 ## and a bam file of the same reads used to id insertiosn
 ## aligned to reference genome to look for spanner
@@ -13,6 +15,7 @@
 ##
 my $sites_file = shift;
 my $bam_dir = shift;
+my $cwd = getcwd();
 my @bam_files; ## can be a single .bam file or a direcotory containing .bam files
 if (-d $bam_dir){
 	#remove trailing '/'
@@ -22,10 +25,14 @@ if (-d $bam_dir){
 	push @bam_files, $bam_dir;
 }
 open INSITES, "$sites_file" or die "cannot open $sites_file $!\n";
-open OUTGFF, ">$sites_file.homo_het.gff";
+my @dir_path = split '/' , $sites_file;
+my $filename = pop @dir_path;
+$cwd =~ s/\/$//;#remove trailing /
+open OUTGFF, ">$cwd/$filename.homo_het.gff";
 print "chromosome.pos\tavg_flankers\tspanners\tstatus\n";#\t$Smatch\t$cigar_all\n";
 while (my $line = <INSITES>){
 	next if $line =~/=/;
+	next if $line =~/^\s/;
 	chomp $line;
 	# mping   A119    Chr1    1448    C:1     R:0     L:1
 	my ($te,$exp,$chromosome, $pos, $total_string, $right_string, $left_string) = split /\t/, $line;
