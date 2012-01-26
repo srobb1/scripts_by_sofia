@@ -178,6 +178,7 @@ foreach my $file (@flanking_fa){
         while (my $seq_obj = $seqIO_obj->next_seq()){
 	        my $seq = $seq_obj->seq;
                 my $id = $seq_obj->id;
+                my $desc = $seq_obj->desc;
                 #print "found $id in $file\n";
 =cut ##think that i do not want to revcomp here, i want to compare the seq from the TTA/TAA to the left and to the right
 	 	if ($seq =~ /(TTA|TAA)$/){
@@ -186,7 +187,7 @@ foreach my $file (@flanking_fa){
                         
 		}
 =cut
-		print ">$branch.$filename.$TE.$id\n$seq\n";
+		print ">$branch.$filename.$TE.$id $desc\n$seq\n";
 	}
 }
 }

@@ -1,13 +1,18 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Spec;
+use Cwd;
 ## this script uses
 ##use file_3 and file_4 to fill in any un_mate-ed reads in files 1 and 2
 
 my $list_file = shift;
 my $dir = shift;
-
-my @files_all_records= <$dir/*fq>;
+my $cwd = getcwd;
+$cwd =~ s/\/$//;
+$dir =~ s/\/$//;
+my $sh_dir = "$cwd/velvet_shellscritps";
+`mkdir -p $sh_dir`;
+my @files_all_records= <$dir/*ContainingReads.fq>;
 
 my %seqs;
 my %inserts;
@@ -38,7 +43,7 @@ my $this_mate = 0;
 foreach my $file (sort @files_all_records){
 	my $file_path = File::Spec->rel2abs( $file ) ;
 	open (my $FQ_fh, "<", $file_path) or die "Can't open $file_path $!\n";
-	print "\t$file_path\n";
+	#print "\t$file_path\n";
 	$this_mate++;
 	my $count;
 	my $rec_count;
@@ -56,7 +61,7 @@ foreach my $file (sort @files_all_records){
 		                $rec_count++;
 				#store it if it is the other mate
 				$seqs{$id}{'mate'}{$this_mate}=$fq_rec;
-	                        print "\t\tseqs added: $rec_count\n" if $rec_count%100 == 0;	
+	                        #print "\t\tseqs found for assemblies: $rec_count\n" if $rec_count%100 == 0;	
 			}
 		}	
 	        print "$file: seqs checked $count\n" if $count%1000000 == 0;	
@@ -73,8 +78,6 @@ my @dirs = dir_split($file_path);
 my $filename = pop @dirs;
 my $dir_path = join '/' , @dirs;
 
-open (my $sh , '>' , "velvet.sh") or die "Can't open velvet.sh for writting $!\n";
-print $sh "#!/bin/bash\n\n";
 foreach my $coord (keys %inserts){
   my $FQ_fh_out_2;
   my $dir = "$dir_path/$coord";
@@ -102,13 +105,17 @@ foreach my $coord (keys %inserts){
  }
   close $FQ_fh_out;
   close $FQ_fh_out_2 if $unpaired;
+  
+  open (my $sh , '>' , "$sh_dir/$coord.sh") or die "Can't open velvet.sh for writting $!\n";
+  print $sh "#!/bin/bash\n\n";
+  print $sh "cd $cwd/$coord\n";
   if ($unpaired){
-    print $sh "VelvetOptimiser.pl -a -s 39 -e 61 -p $coord -f \"-fastq -shortPaired $dir/$filename -short $dir/$coord.unpaired.fq\" \n";
+    print $sh "VelvetOptimiser.pl -a -s 39 -e 61 -p $coord -f \"-fastq -shortPaired $dir/$coord.shuffled.fq -short $dir/$coord.unpaired.fq\" \n";
   }else{  
-    print $sh "VelvetOptimiser.pl -a -s 39 -e 61 -p $coord -f \"-fastq -shortPaired $dir/$filename\" \n";
+    print $sh "VelvetOptimiser.pl -a -s 39 -e 61 -p $coord -f \"-fastq -shortPaired $dir/$coord.unpaired.fq\" \n";
   }
+  close $sh;
 }
-close $sh;
 #####SUBROUTINES########
 sub dir_split{
 	my $path = shift;

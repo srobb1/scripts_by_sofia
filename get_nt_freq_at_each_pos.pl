@@ -8,10 +8,18 @@ my $seqIO_obj = Bio::SeqIO->new (-file => $file , -format => 'fasta');
 my %nt_freq;
 while (my $seq_obj = $seqIO_obj->next_seq){
 	my $seq = $seq_obj->seq;
+        my $desc = $seq_obj->desc;
 	$seq = uc $seq;
 	my @seq = split '' , $seq;
-	for (my $i = 0 ; $i < @seq ; $i++){
-		$nt_freq{$i}{$seq[$i]}++;
+        unshift @seq, '-' ; ##now 0th element is a '-'
+	for (my $i = 1 ; $i < @seq ; $i++){
+                my $pos;
+                if ($desc eq '5prime'){
+                  $pos = $i * -1;
+                }else{
+                  $pos = $i;
+                }
+		$nt_freq{$pos}{$seq[$pos]}++;
 	}
 }
 
@@ -32,7 +40,7 @@ foreach my $pos (sort {$a <=> $b} keys %nt_freq){
 		my $freq_G = defined $count_G ? $count_G / $total_count : 0;
 		my $freq_C = defined $count_C ? $count_C / $total_count : 0;
 		my $freq_N = defined $count_N ? $count_N / $total_count : 0;
-		$pos++;
+		#$pos++;
 		my $to_print = sprintf ("%d\t%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.1f\n",$pos,$total_count,$freq_A,$freq_T,$freq_G,$freq_C,$freq_N);
-		print $to_print;
+		print $to_print if $total_count >= 20;
 }
