@@ -17,6 +17,7 @@ my $mate_2_id    = "_2";
 my $split = 0;
 my $filter_trim = 1;
 my $tempDir = "/scratch";
+my $bin_per_chrom = 1;
 #my $tempDir = "/dev/shm";
 #my $start_host = `hostname`;
 #$start_host =~ s/\s+//g;
@@ -35,6 +36,7 @@ GetOptions(
     'x|split:i'	       => \$split,
     'f|filter_trim:i'  => \$filter_trim,
     't|tempDir:s'      => \$tempDir,
+    'b|bin_per_chrom:i'    => \$bin_per_chrom,
     'h|help'           => \&getHelp,
 );
 
@@ -58,6 +60,7 @@ options:
 -i INT		insert library length [500]
 -1 STR		file containing mate 1 id (ex reads_1.fq) [_1]
 -2 STR		file containing mate 2 id (ex reads_2.fq) [_2]
+-b INT	        split the sam and bam files and organize by chromosome yes=1 no=0 [1]	
 -x INT	        split fq file into smaller files (1,000,000/file) yes=1 no=0 [0]	
 -f INT	        run fastq_quality_filter and fastq_quality_trimmer yes=1 no=0 [1]	
 -t STR		location to create temp directories [/dev/shm]
@@ -142,12 +145,10 @@ foreach my $sample ( sort keys %files ) {
 "fastq_quality_trimmer -Q$Q -l $minLength -t $minQuality -i $dir_path/$file.$fq_ext |fastq_quality_filter -Q$Q -q $minQuality -p $minPercent -v -o \$tmp_dir/$file.trimmed.filtered.fq";
         	push @aln,
 "bwa aln -t 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
-#"bwa aln -t 10 $genome_path \$tmp_dir/$file$desc$ext.matched > \$tmp_dir/$file$desc.matched.sai";
 	}else{
 		print OUTFILE "ln -s $dir_path/$file.$fq_ext \$tmp_dir/.\n";
         	push @aln,
 "bwa aln -t 10 -q 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
-#"bwa aln -t 10 -q 10 $genome_path \$tmp_dir/$file$desc$ext.matched > \$tmp_dir/$file$desc.matched.sai";
 	}
 
     }
@@ -164,17 +165,17 @@ foreach my $sample ( sort keys %files ) {
         ##and bwa samse
         push @clean, "if [ -s \$tmp_dir/$sample.unPaired.fq ] ; then bwa aln -t 10 $genome_path \$tmp_dir/$sample.unPaired.fq > \$tmp_dir/$sample.unPaired.sai ; fi";
         push @clean, "if [ -e \$tmp_dir/$sample.unPaired.sai ] ; then bwa samse  $genome_path \$tmp_dir/$sample.unPaired.sai \$tmp_dir/$sample.unPaired.fq   > \$tmp_dir/$sample.unPaired.sam ; fi";
-        push @split_sam_by_target,"if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then ~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.unPaired.sam ; fi";
+        push @split_sam_by_target,"if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then ~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.unPaired.sam ; fi" if $bin_per_chrom;
         push @sam,
 "bwa sampe -a $insertLength $genome_path \$tmp_dir/$pair1$desc.matched.sai \$tmp_dir/$pair2$desc.matched.sai \$tmp_dir/$pair1$desc.matched$ext \$tmp_dir/$pair2$desc.matched$ext  > \$tmp_dir/$sample.sam";
-        push @split_sam_by_target,
-          "~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.sam";
-        push @sam2fq,
+        if ($bin_per_chrom){
+           push @split_sam_by_target,
+            "~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.sam";
+          push @sam2fq,
 "for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/sam2fq.pl \$tmp_dir/split_by_target/\$i ; done";
-        push @sam2bam,
+          push @sam2bam,
 "for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/sam2bam.pl \$tmp_dir/split_by_target/\$i $genome_path $sample; done";
-#        push @sam2bam,
-#"for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/sam2bam.pl \$tmp_dir/split_by_target/\$i $genome_path $sample.unPaired; done";
+        }
     }
     elsif ( $pairs == 1 ) {
         ( $pair1, $pair2 ) = sort @${ $files{$sample} };
@@ -210,18 +211,25 @@ foreach my $sample ( sort keys %files ) {
         print OUTFILE "$line\n\n";
     }
     print OUTFILE "mkdir -p $current_dir/sam_for_all_reads\n";
+    print OUTFILE "mkdir -p $current_dir/bam_for_all_reads\n";
     print OUTFILE "cp \$tmp_dir/*sam $current_dir/sam_for_all_reads\n";
+    print OUTFILE "samtools view -b -S -T $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
+    print OUTFILE "samtools sort  \$tmp_dir/$sample.bam  \$tmp_dir/$sample.sorted\n";
+    print OUTFILE "samtools index  \$tmp_dir/$sample.sorted.bam\n";   
+    print OUTFILE "cp \$tmp_dir/*sorted.bam* $current_dir/bam_for_all_reads/.\n";
     if ($filter_trim){
     	print OUTFILE "mkdir -p $current_dir/fq_split_by_number_filtered\n";
     	print OUTFILE "cp \$tmp_dir/*.matched.fq \$tmp_dir/*unPaired.fq $current_dir/fq_split_by_number_filtered\n";
     }
-    print OUTFILE "mkdir -p $current_dir/fq_split_by_chromosome\n";
-    print OUTFILE "mkdir -p $current_dir/sam_split_by_chromosome\n";
-    print OUTFILE "mkdir -p $current_dir/bam_split_by_chromosome\n";
-    print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/fq_split_by_chromosome/\$i ; done \n";
-    print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/sam_split_by_chromosome/\$i ; done \n";
-    print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/bam_split_by_chromosome/\$i ; done\n";
-    print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/move_files.pl \$tmp_dir/split_by_target/\$i $current_dir; done\n";
+    if ($bin_per_chrom){
+      print OUTFILE "mkdir -p $current_dir/fq_split_by_chromosome\n";
+      print OUTFILE "mkdir -p $current_dir/sam_split_by_chromosome\n";
+      print OUTFILE "mkdir -p $current_dir/bam_split_by_chromosome\n";
+      print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/fq_split_by_chromosome/\$i ; done \n";
+      print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/sam_split_by_chromosome/\$i ; done \n";
+      print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/bam_split_by_chromosome/\$i ; done\n";
+      print OUTFILE "for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/move_files.pl \$tmp_dir/split_by_target/\$i $current_dir; done\n";
+    }
     print OUTFILE "cd $current_dir\n";
     #print OUTFILE "host_remote=`hostname`\n";
     #print OUTFILE "if [ $start_host = \$host_remote ]; then cd $current_dir; rm -rf \$tmp_dir; else ssh \$host_remote \"rm -rf \$tmp_dir\"; fi\n";
