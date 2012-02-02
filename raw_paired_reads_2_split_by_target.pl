@@ -70,6 +70,13 @@ options:
     exit 1;
 }
 
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+$year += 1900; ## $year contains no. of years since 1900, to add 1900 to make Y2K compliant
+my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
+
+my $date= "$year-$abbr[$mon]-$mday"; ## gives 2012-Dec-17
+
+
 unless ( -e $genomeFasta ) {
     &getHelp();
     die "$genomeFasta does not exist. Check file name.\n";
@@ -78,7 +85,8 @@ unless ( -e $genomeFasta ) {
 my $genome_path = File::Spec->rel2abs($genomeFasta);
 my $current     = File::Spec->curdir();
 my $current_dir = File::Spec->rel2abs($current);
-
+my $log_file = "$current_dir/$date-log.txt";
+`touch $log_file`;
 my $bwa_index = "bwa index -a bwtsw $genome_path";
 unless ( -e "$genome_path.rsa" ) {
     open GINDEX, ">$current_dir/genome_indexing.sh";
@@ -129,6 +137,8 @@ if ($filter_trim){
 foreach my $sample ( sort keys %files ) {
     open OUTFILE, ">$current_dir/$sample.sh";
     print OUTFILE "#!/bin/bash\n\n";
+    print OUTFILE  "compute_node=`hostname`\n"; 
+    print OUTFILE  "echo \"$sample \$compute_node \" >> $log_file\n";
     my (
         @trim_filter, @clean,               @aln,
         @sam,         @split_sam_by_target, @sam2fq,
@@ -210,13 +220,16 @@ foreach my $sample ( sort keys %files ) {
     foreach my $line (@sam2bam) {
         print OUTFILE "$line\n\n";
     }
-    print OUTFILE "mkdir -p $current_dir/sam_for_all_reads\n";
-    print OUTFILE "mkdir -p $current_dir/bam_for_all_reads\n";
-    print OUTFILE "cp \$tmp_dir/*sam $current_dir/sam_for_all_reads\n";
+    print OUTFILE "if [ ! -d \"$current_dir/sam_for_all_reads\" ] ; then mkdir $current_dir/sam_for_all_reads ; fi\n";
+    print OUTFILE "if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir $current_dir/bam_for_all_reads ; fi\n";
+    print OUTFILE "cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads\n";
+    print OUTFILE "if [ -f \"\$tmp_dir/$sample.sam\" ] && [ ! -f \"$current_dir/sam_for_all_reads/$sample.sam\" ] ; then echo \" $sample.sam did not copy to $current_dir/sam_for_all_reads\" ; fi\n" ;
+    print OUTFILE "if [ ! -f \"\$tmp_dir/$sample.sam\" ] ; then echo \" $sample.sam does not exist\" ;fi\n";
     print OUTFILE "samtools view -b -S -T $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
     print OUTFILE "samtools sort  \$tmp_dir/$sample.bam  \$tmp_dir/$sample.sorted\n";
     print OUTFILE "samtools index  \$tmp_dir/$sample.sorted.bam\n";   
-    print OUTFILE "cp \$tmp_dir/*sorted.bam* $current_dir/bam_for_all_reads/.\n";
+    print OUTFILE "cp \$tmp_dir/$sample.sorted.bam* $current_dir/bam_for_all_reads/.\n";
+    print OUTFILE "if [ -f \$tmp_dir/$sample.sorted.bam ] && [ ! -f $current_dir/bam_for_all_reads/$sample.sorted.bam ] ; then echo \" $sample.sorted.bam did not copy to $current_dir/bam_for_all_reads\" ; fi\n";
     if ($filter_trim){
     	print OUTFILE "mkdir -p $current_dir/fq_split_by_number_filtered\n";
     	print OUTFILE "cp \$tmp_dir/*.matched.fq \$tmp_dir/*unPaired.fq $current_dir/fq_split_by_number_filtered\n";
@@ -233,6 +246,7 @@ foreach my $sample ( sort keys %files ) {
     print OUTFILE "cd $current_dir\n";
     #print OUTFILE "host_remote=`hostname`\n";
     #print OUTFILE "if [ $start_host = \$host_remote ]; then cd $current_dir; rm -rf \$tmp_dir; else ssh \$host_remote \"rm -rf \$tmp_dir\"; fi\n";
-    print OUTFILE  "rm -rf \$tmp_dir";
+    print OUTFILE  "rm -rf \$tmp_dir\n";
+    print OUTFILE  "echo \"$sample end_of_commands\" >> $log_file\n";
 }
 
