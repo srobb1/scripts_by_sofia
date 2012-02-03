@@ -200,35 +200,63 @@ foreach my $sample ( sort keys %files ) {
     }
     	
     foreach my $trim_filter (@trim_filter) {
+print OUTFILE "echo \"$sample start trim\"\n";
         print OUTFILE "$trim_filter\n\n";
+print OUTFILE "echo \"$sample end trim\"\n";
     }
     foreach my $clean (@clean) {
+print OUTFILE "echo \"$sample start clean\"\n";
         print OUTFILE "$clean\n\n";
+print OUTFILE "echo \"$sample end clean\"\n";
     }
     foreach my $aln (@aln) {
+print OUTFILE "echo \"$sample start bwa aln\"\n";
         print OUTFILE "$aln\n\n";
+print OUTFILE "echo \"$sample end bwa aln\"\n";
     }
     foreach my $sam (@sam) {
+print OUTFILE "echo \"$sample start bwa sam\"\n";
         print OUTFILE "$sam\n\n";
+print OUTFILE "echo \"$sample end bwa sam\"\n";
     }
     foreach my $line (@split_sam_by_target) {
+print OUTFILE "echo \"$sample start split\"\n";
         print OUTFILE "$line\n\n";
+print OUTFILE "echo \"$sample end split\"\n";
     }
     foreach my $line (@sam2fq) {
+print OUTFILE "echo \"$sample start sam2fq\"\n";
         print OUTFILE "$line\n\n";
+print OUTFILE "echo \"$sample end sam2fq\"\n";
     }
     foreach my $line (@sam2bam) {
+print OUTFILE "echo \"$sample start sam2bam\"\n";
         print OUTFILE "$line\n\n";
+print OUTFILE "echo \"$sample end sam2bam\"\n";
     }
+print OUTFILE "echo \"$sample start make dir $current_dir/sam_for_all_reads\"\n";
     print OUTFILE "if [ ! -d \"$current_dir/sam_for_all_reads\" ] ; then mkdir $current_dir/sam_for_all_reads ; fi\n";
+print OUTFILE "echo \"$sample end make dir $current_dir/sam_for_all_reads\"\n";
+print OUTFILE "echo \"$sample start make dir $current_dir/bam_for_all_reads\"\n";
     print OUTFILE "if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir $current_dir/bam_for_all_reads ; fi\n";
+print OUTFILE "echo \"$sample end make dir $current_dir/bam_for_all_reads\"\n";
+    print OUTFILE "if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir $current_dir/bam_for_all_reads ; fi\n";
+print OUTFILE "echo \"$sample start cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads \"\n";
     print OUTFILE "cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads\n";
+print OUTFILE "echo \"$sample end cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads \"\n";
     print OUTFILE "if [ -f \"\$tmp_dir/$sample.sam\" ] && [ ! -f \"$current_dir/sam_for_all_reads/$sample.sam\" ] ; then echo \" $sample.sam did not copy to $current_dir/sam_for_all_reads\" ; fi\n" ;
     print OUTFILE "if [ ! -f \"\$tmp_dir/$sample.sam\" ] ; then echo \" $sample.sam does not exist\" ;fi\n";
+print OUTFILE "echo \"$sample start samtools\"\n";
+print OUTFILE "echo \"$sample samtools:view\"\n";
     print OUTFILE "samtools view -b -S -T $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
+print OUTFILE "echo \"$sample samtools:sort\"\n";
     print OUTFILE "samtools sort  \$tmp_dir/$sample.bam  \$tmp_dir/$sample.sorted\n";
+print OUTFILE "echo \"$sample samtools:index\"\n";
     print OUTFILE "samtools index  \$tmp_dir/$sample.sorted.bam\n";   
+print OUTFILE "echo \"$sample end samtools\"\n";
+print OUTFILE "echo \"$sample start cp \$tmp_dir/$sample.sorted.bam $current_dir/bam_for_all_reads \"\n";
     print OUTFILE "cp \$tmp_dir/$sample.sorted.bam* $current_dir/bam_for_all_reads/.\n";
+print OUTFILE "echo \"$sample end cp \$tmp_dir/$sample.sorted.bam $current_dir/bam_for_all_reads \"\n";
     print OUTFILE "if [ -f \$tmp_dir/$sample.sorted.bam ] && [ ! -f $current_dir/bam_for_all_reads/$sample.sorted.bam ] ; then echo \" $sample.sorted.bam did not copy to $current_dir/bam_for_all_reads\" ; fi\n";
     if ($filter_trim){
     	print OUTFILE "mkdir -p $current_dir/fq_split_by_number_filtered\n";
