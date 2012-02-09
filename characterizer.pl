@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
+use Data::Dumper;
 use Cwd;
 ## script take output from find_TE_insertion.pl pipeline : ***.te_insertion.all.txt 
 ## and a bam file of the same reads used to id insertiosn
@@ -30,6 +31,7 @@ my $filename = pop @dir_path;
 $cwd =~ s/\/$//;#remove trailing /
 open OUTGFF, ">$cwd/$filename.homo_het.gff";
 print "chromosome.pos\tavg_flankers\tspanners\tstatus\n";#\t$Smatch\t$cigar_all\n";
+my %matches;
 while (my $line = <INSITES>){
 	next if $line =~/=/;
 	next if $line =~/^\s/;
@@ -42,8 +44,6 @@ while (my $line = <INSITES>){
 	
 	my @sam_lines;
 	my $Mmatch=0;
-	my $other_match=0;
-        my %other_match;
 	my $cigar_all;
 	if ($left_count > 0 and $right_count > 0){
 		my @sam_all;
@@ -77,8 +77,8 @@ while (my $line = <INSITES>){
 			## must be a all M match no soft clipping
 			if ($cigar =~ /^\d+M$/){
 				$Mmatch++;
-			}else{
-				$other_match{"$chromosome.$pos"}=$cigar;
+			}elsif ($cigar =~ /[IND]/){
+				push @{$matches{"$chromosome.$pos"}{other}} , $cigar;
 			}
 			#$cigar_all.="$cigar,";	
 		}
@@ -101,9 +101,10 @@ while (my $line = <INSITES>){
 	}elsif (abs ($average_flankers - $spanners) < (($average_flankers + $spanners)/2 )){
 		$status = 'heterozygous?';
 	}
+        $matches{"$chromosome.$pos"}{status}=$status;
 	print "$exp\t$chromosome.$pos\t$average_flankers\t$spanners\t$status\n";#\t$Smatch\t$cigar_all\n";
 	print OUTGFF "$chromosome\t$exp\ttransposable_element_attribute\t$pos\t$pos\t.\t.\t.\tID=$chromosome.$pos.spanners;avg_flankers=$average_flankers;spanners=$spanners;type=$status;\n";
 	#print "$chromosome.$pos\t$total_count\t$left_count\t$right_count\t$Mmatch\t$status\n";#\t$Smatch\t$cigar_all\n";
 	}
 }
-print Dumper \%other_match;
+print Dumper \%matches;
