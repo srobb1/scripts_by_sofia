@@ -19,8 +19,10 @@ my $outdir   = 'construcTEr';
 my $parallel = 1;
 my $mate_file_1        = '_1\D*?fq';
 my $mate_file_2        = '_2\D*?fq';
+my $insert_file = 0;
 GetOptions(
   'p|parallel:i'    => \$parallel,
+  'i|insert_file:s' => \$insert_file,    
   'w|workingdir:s'  => \$workingdir,
   'o|outdir:s'      => \$outdir,
   'd|fq_dir:s'      => \$fq_dir,
@@ -61,6 +63,10 @@ else {
 "The TE_fasta:$te_fasta does not have the proper fasta format\n";
   }
 }
+if ( $insert_file and !-e $insert_file) {
+  print "$insert_file does not exist. Check file name.\n";
+  &getHelp();
+}
 if ( !defined $fq_dir ) {
   print "\n\nPlease provide a directory of complete set of paired fastq files\n";
   &getHelp();
@@ -89,6 +95,7 @@ options:
 -f STR		directory of TE subdirectory of relocaTE output ex: /home/usr/relocaTE_output/myTE/ [no default]
 
 **optional:
+-i STR          name of the file that contains insert positions,relocaTE:all.$te.te_insertion_sites.table.txt (TE<tab>.<tab>ref<tab>pos)
 -o STR          name for directory to contain output directories and files, will be created for the run (ex. 04222012_A123) [construcTEr]
 -p INT          run each genome sequence separetly, parallel. The alternative (0) would be to run one after the other (int, 0=false or 1=true) [1] 
 -w STR          base working directory, needs to exist, will not create, full path [cwd] 
@@ -241,7 +248,7 @@ foreach my $te_path (@te_fastas) {
   my $outregex   = "$current_dir/$top_dir/$TE/$TE.regex.txt";
   open OUTREGEX, ">$outregex" or die $!;
   print OUTREGEX  "$mate_file_1\t$mate_file_2";
-  my $cmd =  "$scripts/construcTEr.pl $fq_dir $genome_file $te_path $current_dir/$top_dir/$TE $outregex";
+  my $cmd =  "$scripts/construcTEr.pl $fq_dir $genome_file $te_path $current_dir/$top_dir/$TE $outregex $insert_file";
   if ($parallel) {
     my $shell_dir = "$current_dir/$top_dir/shellscripts/step_$shell_script_count/$TE";
     `mkdir -p $shell_dir`;

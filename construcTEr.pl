@@ -8,6 +8,7 @@ my $genome_file     = shift;
 my $te_fasta        = shift;
 my $working_dir     = shift;
 my $regex_file      = shift;
+my $insert_pos_file = shift;
 my %seqs;
 
 ##get the regelar expression patterns for mates and for the TE
@@ -20,18 +21,17 @@ my $mate_2_pattern;
 while ( my $line = <INREGEX> ) {
   chomp $line;
   ( $mate_1_pattern, $mate_2_pattern ) = split /\t/, $line;
-  print "$mate_1_pattern--$mate_2_pattern\n";
 }
 
 ## store ranges in TE fasta in %ranges
-print "Storing Ranges\n";
 my %ranges;
 open TE_FA, "$te_fasta" or die "Can't open $te_fasta\n";
-
+my $TE ;
 while ( my $line = <TE_FA> ) {
   chomp $line;
   if ( $line =~ /^>(\S+)/ ) {
     my $te = $1;
+    $TE = $te;
     while ( $line =~ /range=(\S+):(\d+)..(\d+)/ig ) {
       my $range_name = $1;
       my $s          = $2;
@@ -41,10 +41,9 @@ while ( my $line = <TE_FA> ) {
     }
   }
 }
-print "Finding Blat files in $working_dir/blat_output\n";
+my %seq_storage;
 my @blat_files = <$working_dir/blat_output/*blatout>;
 foreach my $blat_file (@blat_files) {
-  ##blat parser
   my @file_path = split '/', $blat_file;
   my $file_name = pop @file_path;
   my $FA        = $file_name;
@@ -52,7 +51,15 @@ foreach my $blat_file (@blat_files) {
   my $te      = $1;
   my $te_mate = $FA;
   $te_mate =~ s/\.fa//;
-
+  my $prefix = $te_mate.'.fq';
+  if ( $prefix =~ /$mate_1_pattern/ ) {
+      $prefix =~ s/$mate_1_pattern//;
+  }elsif ($prefix =~ /$mate_2_pattern/) {
+    $prefix =~ s/$mate_2_pattern//;
+  }
+  my @dbs = `ls $all_records_dir/$prefix*fa`;
+  chomp @dbs;
+  ##blat parser
   open INBLAT, $blat_file, or die "Please provide a blat output file\n";
 
   <INBLAT>;    #get rid of blat header lines
@@ -60,7 +67,6 @@ foreach my $blat_file (@blat_files) {
   <INBLAT>;
   <INBLAT>;
   <INBLAT>;
-  my %seq_storage;
   while ( my $line = <INBLAT> ) {
     my @line        = split /\t/, $line;
     my $matches     = $line[0];
@@ -75,11 +81,11 @@ foreach my $blat_file (@blat_files) {
     my $tEnd        = $line[16];
     my $id          = $qName;
     my $aln_bp      = $matches + $qBaseInsert + $mismatches;
-    ## if the hit overlaps the edge of the TE and not most of the read is aligning
-    ## throw it out
-    next
-      if (( $tStart == 1 or $tEnd == $tLen )
-      and ($aln_bp) <= ( $qLen * .98 ) );
+    #### if the hit overlaps the edge of the TE and not most of the read is aligning
+    #### throw it out
+    ##next
+    ##  if (( $tStart == 1 or $tEnd == $tLen )
+    ##  and ($aln_bp) <= ( $qLen * .98 ) );
     my $add = 0;
     if ( exists $seqs{$te}{$id}{$te_mate}{blat_hit}{matches} ) {
       my $stored_matches = $seqs{$te}{$id}{$te_mate}{blat_hit}{matches};
@@ -109,24 +115,25 @@ foreach my $blat_file (@blat_files) {
       $seqs{$te}{$id}{$te_mate}{blat_hit}{tStart}      = $tStart;
       $seqs{$te}{$id}{$te_mate}{blat_hit}{tEnd}        = $tEnd;
       $seqs{$te}{$id}{$te_mate}{$te}                   = 1;
-      my $other_mate = $te_mate;
 
-      if ( $other_mate =~ /$mate_1_pattern/ ) {
-        $other_mate =~ s/$mate_1_pattern/$mate_2_pattern/;
+      foreach my $db (@dbs){
+        $seq_storage{$te}{$db}{$id} = 1;
       }
-      else {
-        $other_mate =~ s/$mate_2_pattern/$mate_1_pattern/;
-      }
-      $seq_storage{$te_mate} .= "$id,";
-      $seq_storage{$other_mate} .= "$id,";
     }
   }
-  foreach my $mate ( keys %seq_storage ) {
-    my $fastacmd_str = $seq_storage{$mate};
-    ##make this a subroutine
-    #$fastacmd_str =~ s/,$//;
+}
+foreach my $te (keys %seq_storage){
+  foreach my $mate_fa ( keys %{$seq_storage{$te}} ) {
+    my @mate_fa_path = split '/' , $mate_fa;
+    my $file_name = pop @mate_fa_path;
+    ##my $fa_out_dir = "$working_dir/construcTEr_collected_fa";
+    ##`mkdir -p $fa_out_dir`;
+    ##open OUTFA , ">$fa_out_dir/$file_name";
+    my $mate = $file_name;
+    $mate =~ s/\.fa//;
+    my $fastacmd_str = join ',' , sort keys %{$seq_storage{$te}{$mate_fa}};
     my $seq_recs =
-      `fastacmd -d $all_records_dir/$mate.fa -s $fastacmd_str`;
+      `fastacmd -d $mate_fa -s $fastacmd_str`;
     if ( defined $seq_recs ) {
       my @seq_recs = split />/, $seq_recs;
       ## get rid of first empty record
@@ -137,108 +144,14 @@ foreach my $blat_file (@blat_files) {
         my ($id) = split /\s+/, $header;
         $id =~ s/lcl\|//;
         my $seq = join '', @seq;
-        $seqs{$te}{$id}{$te_mate}{seq} = $seq;
+        $seqs{$te}{$id}{$mate}{seq} = $seq;
+        ##print OUTFA ">$id\n$seq\n";
       }
     }
   }
 }
-print Dumper \%seqs;
-##checking to see if these files already exist
-#my $out_fa_path = "$working_dir/te_containing_fa";
-#if (! -e "$out_fa_path/$FA.te_$TE.ContainingReads.fa" ) {
-#  open OUTFQ,  ">$out_fq_path/$FA.te_$TE.ContainingReads.fa";
-#  my $fastacmd_str = '';
-#  foreach my $id (keys %{$seqs{$TE}}){
-#    $fastacmd_str .= "$id,";
-#  }
-#  print OUTFQ `fastacmd -d $all_records_dir/$FA.fa -p F -s $fastacmd_str`;
-#  `formatdb -i $out_fq_path/$FA.te_$TE.ContainingReads.fa -p F -o T`;
-#}
-
-#  $relocaTE =~ s/\/$//;
-#  $te_fq_dir = "$relocaTE/te_containing_fq";
-
-#my @te_fq_dir = split '/', $te_fq_dir;
-#my @base_dir = @te_fq_dir;
-#pop @base_dir;
-#my $base_dir        = join( '/', @base_dir );
-#my $bowtie_base_dir = join( '/', @base_dir );
-#my @fq_files        = <$te_fq_dir/*fq>;
-#my %seqs;
-#my %files;
-#my $construcTEr_dir = "$base_dir/construcTEr";
-#`mkdir -p $construcTEr_dir`;
-
-##add all seq in TE containing fq to %seqs
-#foreach my $file ( sort @fq_files ) {
-#  my @file_name = split '/', $file;
-#  my $this_mate = pop @file_name;
-#  $this_mate =~ s/\.te_(.+)\.ContainingReads.fq$//;
-#  my $te           = $1;
-#  my $file_pattern = $this_mate;
-#  $file_pattern =~ s/_[1|2]$//;
-#  $files{$file_pattern}++;
-#  my $file_path = File::Spec->rel2abs($file);
-#  open( my $FQ_fh, "<", $file_path ) or die "Can't open $file_path $!\n";
-
-#  while ( my $fq_rec = get_FQ_record($FQ_fh) ) {
-#    my $header = get_header($fq_rec);
-#    my $id     = $header;
-#    $id =~ s/\/[12]$//;
-#    $id =~ s/^@//;
-#    if ( !exists $seqs{$te}{$id}{$this_mate} ) {
-
-#store it if it is the other mate
-#     $seqs{$te}{$id}{$this_mate}{fq_rec} = $fq_rec;
-#     $seqs{$te}{$id}{$this_mate}{$te} = 1;
-#   }
-# }
-# close $FQ_fh;
-#}
-
-##get seq of the reads and the mates that blat to the TE
-#foreach my $file_pattern ( sort keys %files ) {
-#  my @all_records = <$all_records_dir/*$file_pattern*fq>;
-#  foreach my $file ( sort @all_records ) {
-#    my @file_name    = split '/', $file;
-#    my $this_mate    = pop @file_name;
-#    my $te_and_mates = "$construcTEr_dir/$this_mate";
-#    $this_mate =~ s/\.fq$//;
-#    my $file_path;
-#    my $cherry_picked = 0;
-#    if ( -e $te_and_mates and -s $te_and_mates ) {
-#      $file_path     = File::Spec->rel2abs($te_and_mates);
-#      $cherry_picked = 1;
-#    }
-#    else {
-#      $file_path = File::Spec->rel2abs($file);
-#      open OUTFQ, ">$te_and_mates"
-#        or die "Can't open $te_and_mates for writing , $!\n";
-#    }
-#    open( my $FQ_fh, "<", $file_path ) or die "Can't open $file_path $!\n";
-#    while ( my $fq_rec = get_FQ_record($FQ_fh) ) {
-#      my $header = get_header($fq_rec);
-#      my $id     = $header;
-#      $id =~ s/\/[12]$//;
-#      $id =~ s/^@//;
-#      foreach my $te ( keys %seqs ) {
-#        if ( exists $seqs{$te}{$id} and !exists $seqs{$te}{$id}{$this_mate} ) {
-#          ##store it if it is the other mate
-#          $seqs{$te}{$id}{$this_mate}{fq_rec} = $fq_rec;
-#          print OUTFQ print_fq_record($fq_rec), "\n" if !$cherry_picked;
-#        }
-#      }
-#    }
-#    close OUTFQ if !$cherry_picked;
-#    close $FQ_fh;
-#  }
-#}
-#
 ##get reads to align to genome
 foreach my $te ( keys %seqs ) {
-
-  #my $bowtie_2_aln = "$construcTEr_dir/$te.construcTEr.bowtie2aln.fq";
-  #open BOWTIEFQ, ">$bowtie_2_aln" or die "Can't open $bowtie_2_aln, $!\n";
   my $bowtie_2_aln = "$working_dir/$te.construcTEr.bowtie2aln.fa";
   open BOWTIEFA, ">$bowtie_2_aln" or die "Can't open $bowtie_2_aln, $!\n";
   foreach my $id ( keys %{ $seqs{$te} } ) {
@@ -251,12 +164,7 @@ foreach my $te ( keys %seqs ) {
         and !exists $seqs{$te}{$id}{$mate}{$te} )
       {
         my $seq = $seqs{$te}{$id}{$mate}{seq};
-        print BOWTIEFA "$mate,$id\n$seq\n";
-
-        #my $seq         = get_seq( $seqs{$te}{$id}{$mate}{fq_rec} );
-        #my $qual        = get_qual( $seqs{$te}{$id}{$mate}{fq_rec} );
-        #my $qual_header = get_qual_header( $seqs{$te}{$id}{$mate}{fq_rec} );
-        #print BOWTIEFQ '@', "$mate,$id\n$seq\t$qual_header\n$qual\n";
+        print BOWTIEFA ">$mate,$id\n$seq\n";
       }
     }
   }
@@ -266,7 +174,7 @@ foreach my $te ( keys %seqs ) {
   if ( !-e "$genome_file.bowtie_build_index.1.ebwt" ) {
     `bowtie-build -f $genome_file $genome_file.bowtie_build_index`;
   }
-`bowtie --best -a -v 2 -q $genome_file.bowtie_build_index $bowtie_2_aln  1> $bowtie_out 2> $working_dir/bowtie.stderr`;
+`bowtie --best -a -v 2 -f $genome_file.bowtie_build_index $bowtie_2_aln  1> $bowtie_out 2> $working_dir/bowtie.stderr`;
 ##parse bowtie out and record the genomic locations of alignments
   my $file_path = File::Spec->rel2abs($bowtie_out);
   open( my $BOWTIE_fh, "<", $file_path ) or die "Can't open $file_path $!\n";
@@ -285,118 +193,16 @@ foreach my $te ( keys %seqs ) {
         delete $seqs{$te}{$id}{$this_mate}{$te};
       }
       my $end = $start + ( length $seq ) - 1;
-      $seqs{$te}{$id}{$this_mate}{aln}{$target}{"$start..$end($mismatch)"}
-        {start} = $start;
-      $seqs{$te}{$id}{$this_mate}{aln}{$target}{"$start..$end($mismatch)"}
-        {strand} = $strand;
+      my $id_str = "$start..$end($mismatch)";
+      $seqs{$te}{$id}{$this_mate}{aln}{$target}{$id_str}{start} = $start;
+      $seqs{$te}{$id}{$this_mate}{aln}{$target}{$id_str}{strand} = $strand;
       my @mismatches = split( ',', $mismatch );
-      $seqs{$te}{$id}{$this_mate}{aln}{$target}{"$start..$end($mismatch)"}
-        {mismatch} = @mismatches;
-      $seqs{$te}{$id}{$this_mate}{aln}{$target}{"$start..$end($mismatch)"}
-        {seq} = $seq;
+      $seqs{$te}{$id}{$this_mate}{aln}{$target}{$id_str}{mismatch} = @mismatches;
+      $seqs{$te}{$id}{$this_mate}{aln}{$target}{$id_str}{seq} = $seq;
     }
   }
 }
 
-#my %ranges;
-#foreach my $te ( keys %seqs ) {
-#  open TE_FA, "$base_dir/$te.fa" or die "Can't open $base_dir/$te.fa\n";
-#  while (my $line = <TE_FA>){
-#    chomp $line;
-#    if ($line =~ /^>(\S+)/){
-#      my $te = $1;
-#      while ($line =~ /range=(\S+):(\d+)..(\d+)/ig){
-#        my $range_name = $1;
-#        my $s = $2;
-#        my $e = $3;
-#
-#       $ranges{$te}{$range_name} = range_create($s, $e);
-#      }
-#    }
-#  }
-#  my $blat_query_file = "$construcTEr_dir/$te.blat.query.fa";
-#  open BLATQUERY, ">$blat_query_file\n";
-#  foreach my $id ( keys %{ $seqs{$te} } ) {
-#    ##check to see if there is only 1 mate
-#    if ( keys %{ $seqs{$te}{$id} } == 1 ) {
-#      delete $seqs{$te}{$id};
-#      next;
-#    }
-#    ##now we should have both mates
-#    my $te_mate     = 0;
-#    my $genome_mate = 0;
-#    foreach my $mate ( keys %{ $seqs{$te}{$id} } ) {
-#      foreach my $target ( keys %{ $seqs{$te}{$id}{$mate} } ) {
-#        if ( $target eq $te ) {
-#          $te_mate = $mate;
-#        }
-#        else {
-#          $genome_mate = 1;
-#        }
-#      }
-#    }
-#    if ( $te_mate and $genome_mate ) {
-#      my $seq = get_seq( $seqs{$te}{$id}{$te_mate}{fq_rec} );
-#      print BLATQUERY ">$te_mate,$id\n$seq\n";
-#    }
-#    else {
-#      delete $seqs{$te}{$id};
-#    }
-#  }
-#  if ( -s $blat_query_file ) {
-#`blat $base_dir/$te.fa $blat_query_file $construcTEr_dir/$te.construcTEr.blatout -minScore=10 -noHead`;
-#    open BLATOUT, "$construcTEr_dir/$te.construcTEr.blatout";
-#    while ( my $line = <BLATOUT> ) {
-#      my @line        = split /\t/, $line;
-#      my $matches     = $line[0];
-#      my $mismatches  = $line[1];
-#      my $qBaseInsert = $line[5];
-#      my $tBaseInsert = $line[7];
-#      my $strand      = $line[8];
-#      my $qName       = $line[9];
-#      my $qLen        = $line[10];
-#      my $tLen        = $line[14];
-#      my $tStart      = $line[15] + 1;
-#      my $tEnd        = $line[16];
-#      my ( $te_mate, $id ) = split ',', $qName;
-#      my $add = 0;
-#
-#      my $aln_bp         = $matches + $qBaseInsert + $mismatches ;
-#      ## if the hit overlaps the edge of the TE and not most of the read is aligning
-#      ## throw it out
-#      next if (( $tStart == 1 or $tEnd == $tLen ) and ( $aln_bp ) <= ( $qLen * .98 ) );
-#      if ( exists $seqs{$te}{$id}{$te_mate}{blat_hit}{matches} ) {
-#        my $stored_matches = $seqs{$te}{$id}{$te_mate}{blat_hit}{matches};
-#        my $stored_mm      = $seqs{$te}{$id}{$te_mate}{blat_hit}{mismatches};
-#        my $stored_qBI     = $seqs{$te}{$id}{$te_mate}{blat_hit}{qBaseInsert};
-#        my $stored_aln_bp  = $stored_matches + $stored_qBI + $stored_mm ;
-#        ## if blat hit for this read already exists, is it better?
-#        if ( ( $aln_bp ) > ( $stored_aln_bp ) ) {
-#          $add = 1;
-#          delete $seqs{$te}{$id}{$te_mate}{blat_hit};
-#        }
-#        else {
-#          ##don't do anything, don't add new one, don't delete old one
-#        }
-#      }
-#      else {
-#        ##doesnt exist so add it
-#        $add = 1;
-#      }
-#      if ($add) {
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{qlen}        = $qLen;
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{qBaseInsert} = $qBaseInsert;
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{tBaseInsert} = $tBaseInsert;
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{strand}      = $strand;
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{matches}     = $matches;
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{mismatches}  = $mismatches;
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{tStart}      = $tStart;
-#        $seqs{$te}{$id}{$te_mate}{blat_hit}{tEnd}        = $tEnd;
-#      }
-#    }
-#  }
-#}
-#
 my %construcTEr;
 foreach my $te ( keys %seqs ) {
   foreach my $id ( keys %{ $seqs{$te} } ) {
@@ -434,8 +240,9 @@ foreach my $te ( keys %seqs ) {
     if ( $te_hit and $genome_aln ) {
       my %storage;
       foreach my $mate ( sort keys %{ $seqs{$te}{$id} } ) {
-        my $fq_obj = $seqs{$te}{$id}{$mate}{fq_rec};
-        my $seq    = get_seq($fq_obj);
+        #my $fq_obj = $seqs{$te}{$id}{$mate}{fq_rec};
+        #my $seq    = get_seq($fq_obj);
+        my $seq    =  $seqs{$te}{$id}{$mate}{seq};
         if ( exists $seqs{$te}{$id}{$mate}{blat_hit} ) {
           my $tStart     = $seqs{$te}{$id}{$mate}{blat_hit}{tStart};
           my $qlen       = $seqs{$te}{$id}{$mate}{blat_hit}{qlen};
@@ -505,20 +312,29 @@ foreach my $te ( keys %seqs ) {
     }
   }
 }
-
+my %inserts;
+if ($insert_pos_file){
+open INSERTS, "$insert_pos_file";
+while (my $line = <INSERTS>){
+  next if $line =~ /^TE.+Exper.+chromosome.+insertion_site.+left_flanking_read_count/;
+  my ($TE, $sample_desc, $target, $pos) = split /\t/, $line;
+  $inserts{$target}{"$target:$pos"}{pos}=$pos;
+  }
+}
+#print Dumper \%inserts;
 foreach my $target ( sort keys %construcTEr ) {
-  foreach my $range_str (
+  foreach my $range (
     sort { ( split /\.\./, $a )[0] <=> ( split /\.\./, $b )[0] }
     keys %{ $construcTEr{$target} }
     )
   {
-    foreach my $name ( keys %{ $construcTEr{$target}{$range_str} } ) {
-      my $start    = $construcTEr{$target}{$range_str}{$name}{start};
-      my $end      = $construcTEr{$target}{$range_str}{$name}{end};
-      my $strand   = $construcTEr{$target}{$range_str}{$name}{strand};
-      my $seq      = $construcTEr{$target}{$range_str}{$name}{seq};
-      my $mismatch = $construcTEr{$target}{$range_str}{$name}{mismatch};
-      my $id       = $construcTEr{$target}{$range_str}{$name}{id};
+    foreach my $name ( keys %{ $construcTEr{$target}{$range} } ) {
+      my $start    = $construcTEr{$target}{$range}{$name}{start};
+      my $end      = $construcTEr{$target}{$range}{$name}{end};
+      my $strand   = $construcTEr{$target}{$range}{$name}{strand};
+      my $seq      = $construcTEr{$target}{$range}{$name}{seq};
+      my $mismatch = $construcTEr{$target}{$range}{$name}{mismatch};
+      my $id       = $construcTEr{$target}{$range}{$name}{id};
 
       #if ($strand eq '-'){
       #  ( $seq = reverse $seq ) =~ tr/AaGgTtCcNn/TtCcAaGgNn/;
@@ -538,13 +354,60 @@ foreach my $target ( sort keys %construcTEr ) {
         }
         $range_str =~ s/^,//;
       }
-
+      if ($insert_pos_file){
+      my ($r_s, $r_e) = split /\.\./ , $range;
+      foreach my $insert_str(keys %{$inserts{$target}}){
+        my $pos = $inserts{$target}{$insert_str}{pos};
+        if ( ((abs ($r_s -$pos)) < 500) or ((abs ($r_e -$pos)) < 500) ){
+          push @{$inserts{$target}{$insert_str}{rec}} , ">$id $name:$start..$end ($strand) mismatches=$mismatch $range_str\n$seq\n";   
+        }
+      }
+      }
       print
 ">$id $name:$start..$end ($strand) mismatches=$mismatch $range_str\n$seq\n";
     }
   }
 }
 
+## trying to make a output table
+if ($insert_pos_file) {
+  my $out_dir = "$working_dir/insert_fa";
+  `mkdir -p $out_dir`;
+  open OUTTABLE , ">$working_dir/$TE.inserts.range.coverage.table.txt";
+  my $rangeHeader = "TE\tpos";
+  my @rangeHeader = sort keys %{ $ranges{$TE} };
+  foreach my $name ( sort keys %{ $ranges{$TE} } ) {
+    my $name_range = $ranges{$TE}{$name};
+    my $s          = range_get_start($name_range);
+    my $e          = range_get_end($name_range);
+    $rangeHeader .= "\t$name:$s..$e";
+  }
+  print OUTTABLE $rangeHeader, "\n";
+  foreach my $target ( sort keys %inserts ) {
+    foreach my $insert_str ( keys %{ $inserts{$target} } ) {
+
+      my @values;
+      open OUT, ">$out_dir/$insert_str.fa";
+      foreach my $seq_rec ( @{ $inserts{$target}{$insert_str}{rec} } ) {
+        print OUT "$seq_rec";
+        for ( my $i = 0 ; $i < @rangeHeader ; $i++ ) {
+          if (!defined $values[$i]){
+            $values[$i] = 0;
+          }
+          my $n = $rangeHeader[$i];
+          if ( $seq_rec =~ /$n=(\d+)/ ) {
+            my $value = $1;
+            if ( $value >= $values[$i] ) {
+              $values[$i] = $value;
+            }
+          }
+        }
+      }
+      print OUTTABLE "$TE\t$insert_str\t", join ("\t" ,@values) , "\n";
+    }
+    close OUT;
+  }
+}
 #####SUBROUTINES########
 sub dir_split {
   my $path = shift;
@@ -556,52 +419,6 @@ sub filename_split {
   my $file = shift;
   my @file = split /\./, $file;
   return @file;
-}
-
-sub get_header {
-  my $ref2array = shift;
-  return ${$ref2array}[0];
-}
-
-sub get_seq {
-  my $ref2array = shift;
-  return ${$ref2array}[1];
-}
-
-sub get_qual_header {
-  my $ref2array = shift;
-  return ${$ref2array}[2];
-}
-
-sub get_qual {
-  my $ref2array = shift;
-  return ${$ref2array}[3];
-}
-
-sub print_fq_record {
-  my $ref2array = shift;
-  return join "\n", @{$ref2array};
-}
-
-sub get_FQ_record {
-  my $file_handle  = shift;
-  my $ref_seq_hash = shift;
-  while ( my $header = <$file_handle> ) {
-    chomp $header;
-    my $seq = <$file_handle>;
-    chomp $seq;
-    my $qual_header = <$file_handle>;
-    chomp $qual_header;
-    my $qual = <$file_handle>;
-    chomp $qual;
-
-    die
-"Expected a FASTQ header line containing \'@\' but did not find it, found this instead $header\n"
-      if substr( $header, 0, 1 ) ne '@';
-
-    return ( [ $header, $seq, $qual_header, $qual ] );
-  }
-
 }
 
 sub range_create {
@@ -631,7 +448,14 @@ sub range_check {
   return $range;
 
 }
-
+sub range_get_start {
+ my $r = shift;
+ return $$r[0];
+}
+sub range_get_end {
+ my $r = shift;
+ return $$r[1];
+}
 sub range_overlap {
   ## returns the size of the overlap
   my ( $r1, $r2 ) = @_;
@@ -659,10 +483,10 @@ sub range_overlap {
   ## r2    |--->
   elsif ( $s2 >= $s and $s2 <= $e and $e2 >= $s ) {
     if ( $e2 <= $e ) {
-      return ( $e2 - $s + 1 );
+      return ( $e2 - $s2 + 1 );
     }
     elsif ( $e2 > $e ) {
-      return ( $e - $s + 1 );
+      return ( $e - $s2 + 1 );
     }
     else {
       die "range: error2\n";
