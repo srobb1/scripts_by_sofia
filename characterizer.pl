@@ -98,7 +98,7 @@ while ( my $line = <INSITES> ) {
       elsif ( $cigar !~ /S/ and $cigar =~ /[IND]/ ) {
 
         #push @{$matches{"$chromosome.$pos"}{sam}} , $sam_line;
-        $matches{"$chromosome.$pos"}{sam}=$sam_line;
+        $matches{"$chromosome.$pos"}{sam}{$sam_line}=1;
       }
 
       #$cigar_all.="$cigar,";
@@ -143,24 +143,26 @@ while ( my $line = <INSITES> ) {
 #print "$chromosome.$pos\t$total_count\t$left_count\t$right_count\t$Mmatch\t$status\n";#\t$Smatch\t$cigar_all\n";
   }
 }
+my @unlink_files;
 foreach my $pos ( keys %matches ) {
+ my ($target, $loc) = split '.' , $pos;
   my $sam = "$cwd/$pos.sam";
   my $bam = "$cwd/$pos.bam";
   my $sorted_bam = "$cwd/$pos.sorted";
   my @headers    = sort keys %{ $matches{$pos}{header} };
-  my @sam_lines  = sort keys %{ $matches{$pos}{sam} };
+  my @sam_lines  = keys %{ $matches{$pos}{sam} };
   my $pos_sam    = join "\n", @headers, @sam_lines;
   open POSSAM, ">$cwd/$pos.sam";
   print POSSAM $pos_sam,"\n";
+  push @unlink_files, $sam;
   if (-s "$cwd/$pos.sam"){
   `samtools view -b -S $sam > $bam`;
   `samtools sort $bam $sorted_bam`;
   `samtools index $sorted_bam.bam`; 
-  unlink $sam;
-  unlink $bam;
-  `samtools mpileup -ugf -C50 $genome_fasta $sorted_bam.bam | bcftools view -bvcg - > $pos.var.raw.bcf`;
-  `bcftools view $pos.var.raw.bcf | vcfutils.pl varFilter -D 100 > $pos.var.flt.vcf`;
-  unlink "$pos.var.raw.bcf";
+  `samtools mpileup -ugf -C 50 -r \'$target:$loc-$loc\' $genome_fasta $sorted_bam.bam | bcftools view -bvcg - > $cwd/$pos.var.raw.bcf`;
+  `bcftools view $cwd/$pos.var.raw.bcf | vcfutils.pl varFilter -D 100 > $cwd/$pos.var.flt.vcf`;
+  push @unlink_files, $bam, "$sorted_bam.bam", "$cwd/$pos.var.raw.bcf";
   ##mplieup here
   }
 }
+#unlink @unlink_files; 
