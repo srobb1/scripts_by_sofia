@@ -11,6 +11,8 @@ rsync -uL ~/bin/find_mping_insertions/* ~/src/scripts_by_sofia/find_mping_insert
 rsync -uL ~/bin/gff_and_seqfeaturestore_scripts/* ~/src/scripts_by_sofia/gff_and_seqfeaturestore_scripts/.
 rsync -uL ~/bin/process_raw_paired_reads_2_split_by_target/* ~/src/scripts_by_sofia/process_raw_paired_reads_2_split_by_target/.
 rsync -uL ~/bin/dynGenomClass/* ~/src/scripts_by_sofia/dynGenomClass/.
+rsync -uL ~/bin/relocaTE/* ~/src/scripts_by_sofia/relocaTE/.
+rsync -uL ~/bin/relocaTE_editing/* ~/src/scripts_by_sofia/relocaTE_editing/.
 
 ##TEamRice
 rsync -uL ~/bin/find_mping_insertions/* ~/src/TEamRice/find_mping_insertions/.

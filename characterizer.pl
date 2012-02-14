@@ -45,10 +45,9 @@ while ( my $line = <INSITES> ) {
   chomp $line;
 
   # mping   A119    Chr1    1448    C:1     R:0     L:1
-  my ( $te, $exp, $chromosome, $pos, $total_string, $right_string,
-    $left_string ) = split /\t/, $line;
-
-#my ($te,$TSD,$exp,$chromosome, $pos, $total_string, $right_string, $left_string) = split /\t/, $line;
+  my ( $te, $exp, $chromosome, $pos, $total_string, $right_string, $left_string ) = split /\t/, $line;
+  my $TSD = 'TTA';
+  #my ($te,$TSD,$exp,$chromosome, $pos, $total_string, $right_string, $left_string) = split /\t/, $line;
   my ($total_count) = $total_string =~ /C:(\d+)/;
   my ($left_count)  = $left_string  =~ /L:(\d+)/;
   my ($right_count) = $right_string =~ /R:(\d+)/;
@@ -95,7 +94,8 @@ while ( my $line = <INSITES> ) {
       if ( $cigar =~ /^\d+M$/ ) {
         $Mmatch++;
       }
-      elsif ( $cigar !~ /S/ and $cigar =~ /[IND]/ ) {
+      #elsif ( $cigar !~ /S/ and $cigar =~ /[IND]/ ) {
+      elsif ( $cigar =~ /[IND]/ ) {
 
         #push @{$matches{"$chromosome.$pos"}{sam}} , $sam_line;
         $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
@@ -135,10 +135,10 @@ while ( my $line = <INSITES> ) {
       $status = 'heterozygous?';
     }
     $matches{"$chromosome.$pos"}{status} = $status;
-    print "$exp\t$chromosome.$pos\t$average_flankers\t$spanners\t$status\n"
+    print "$exp\t$te\t$TSD\t$chromosome.$pos\t$average_flankers\t$spanners\t$status\n"
       ;    #\t$Smatch\t$cigar_all\n";
     print OUTGFF
-"$chromosome\t$exp\ttransposable_element_attribute\t$pos\t$pos\t.\t.\t.\tID=$chromosome.$pos.spanners;avg_flankers=$average_flankers;spanners=$spanners;type=$status;\n";
+"$chromosome\t$exp\ttransposable_element_attribute\t$pos\t$pos\t.\t.\t.\tID=$chromosome.$pos.spanners;avg_flankers=$average_flankers;spanners=$spanners;type=$status;TE=$te,TSD=$TSD\n";
 
 #print "$chromosome.$pos\t$total_count\t$left_count\t$right_count\t$Mmatch\t$status\n";#\t$Smatch\t$cigar_all\n";
   }
