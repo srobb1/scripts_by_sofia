@@ -267,7 +267,7 @@ foreach my $sample ( sort keys %files ) {
   print OUTFILE "echo \"$sample start samtools\"\n";
   print OUTFILE "echo \"$sample samtools:view\"\n";
   print OUTFILE
-"samtools view -h -b -S -t $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
+"samtools view -h -b -S -T $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
 #"samtools view -b -S -h -T $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
   print OUTFILE "echo \"$sample samtools:sort\"\n";
   print OUTFILE

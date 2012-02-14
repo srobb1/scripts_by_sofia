@@ -14,10 +14,10 @@ use Cwd;
 ## mping_homozygous_heterozygous.pl A119.mping.te_insertion.all.txt ../bam_files/ > A119.inserts_characterized.txt
 ##
 ##
-my $sites_file = shift;
-my $bam_dir    = shift;
+my $sites_file   = shift;
+my $bam_dir      = shift;
 my $genome_fasta = shift;
-my $cwd        = getcwd();
+my $cwd          = getcwd();
 my @bam_files
 
   ;    ## can be a single .bam file or a direcotory containing .bam files
@@ -60,11 +60,11 @@ while ( my $line = <INSITES> ) {
     foreach my $bam_file (@bam_files) {
       ## get any alignments that overlap the insertion site
       my @sam_out = `samtools view $bam_file \'$chromosome:$pos-$pos\'`;
+
+#my @header = `samtools view -HT $genome_fasta $bam_file \'$chromosome:$pos-$pos\'`;
+#my $header = join "\n" , @header;
+#$matches{"$chromosome.pos"}{header} = $header;
       push @sam_all, @sam_out;
-      foreach my $header (`samtools view -H $bam_file \'$chromosome\'`) {
-        chomp $header;
-        $matches{"$chromosome.$pos"}{header}{$header} = 1;
-      }
     }
 
     #remove redundant lines in sam file
@@ -98,7 +98,7 @@ while ( my $line = <INSITES> ) {
       elsif ( $cigar !~ /S/ and $cigar =~ /[IND]/ ) {
 
         #push @{$matches{"$chromosome.$pos"}{sam}} , $sam_line;
-        $matches{"$chromosome.$pos"}{sam}{$sam_line}=1;
+        $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
       }
 
       #$cigar_all.="$cigar,";
@@ -145,24 +145,26 @@ while ( my $line = <INSITES> ) {
 }
 my @unlink_files;
 foreach my $pos ( keys %matches ) {
- my ($target, $loc) = split '.' , $pos;
-  my $sam = "$cwd/$pos.sam";
-  my $bam = "$cwd/$pos.bam";
+  my ( $target, $loc ) = split /\./, $pos;
+  my $range      = "$target:$pos";
+  my $sam        = "$cwd/$pos.sam";
+  my $bam        = "$cwd/$pos.bam";
   my $sorted_bam = "$cwd/$pos.sorted";
-  my @headers    = sort keys %{ $matches{$pos}{header} };
   my @sam_lines  = keys %{ $matches{$pos}{sam} };
-  my $pos_sam    = join "\n", @headers, @sam_lines;
-  open POSSAM, ">$cwd/$pos.sam";
-  print POSSAM $pos_sam,"\n";
-  push @unlink_files, $sam;
-  if (-s "$cwd/$pos.sam"){
-  `samtools view -b -S $sam > $bam`;
-  `samtools sort $bam $sorted_bam`;
-  `samtools index $sorted_bam.bam`; 
-  `samtools mpileup -ugf -C 50 -r \'$target:$loc-$loc\' $genome_fasta $sorted_bam.bam | bcftools view -bvcg - > $cwd/$pos.var.raw.bcf`;
-  `bcftools view $cwd/$pos.var.raw.bcf | vcfutils.pl varFilter -D 100 > $cwd/$pos.var.flt.vcf`;
-  push @unlink_files, $bam, "$sorted_bam.bam", "$cwd/$pos.var.raw.bcf";
-  ##mplieup here
+  if ( @sam_lines > 1 ) {
+    my $pos_sam = join "\n", @sam_lines;
+    open POSSAM, ">$sam";
+    print POSSAM $pos_sam;
+    print "starting samtools\n";
+    `samtools view -bT $genome_fasta $sam > $bam`;
+    `samtools sort $bam $sorted_bam`;
+    `samtools index $sorted_bam.bam`;
+
+`samtools mpileup -C50 -ugf $genome_fasta -r $range  $sorted_bam.bam | bcftools view -bvcg - > $cwd/$pos.var.raw.bcf`;
+`bcftools view $cwd/$pos.var.raw.bcf | vcfutils.pl varFilter -D 100 > $cwd/$pos.var.flt.vcf`;
+
+    push @unlink_files, $sam, $bam, "$sorted_bam.bam", "$cwd/$pos.var.raw.bcf";
+    close POSSAM;
   }
 }
-#unlink @unlink_files; 
+unlink @unlink_files;
