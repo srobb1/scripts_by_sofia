@@ -45,9 +45,9 @@ while ( my $line = <INSITES> ) {
   chomp $line;
 
   # mping   A119    Chr1    1448    C:1     R:0     L:1
-  my ( $te, $exp, $chromosome, $pos, $total_string, $right_string, $left_string ) = split /\t/, $line;
-  my $TSD = 'TTA';
-  #my ($te,$TSD,$exp,$chromosome, $pos, $total_string, $right_string, $left_string) = split /\t/, $line;
+  #my ( $te, $exp, $chromosome, $pos, $total_string, $right_string, $left_string ) = split /\t/, $line;
+  #my $TSD = 'TTA';
+  my ($te,$TSD,$exp,$chromosome, $pos, $total_string, $right_string, $left_string) = split /\t/, $line;
   my ($total_count) = $total_string =~ /C:(\d+)/;
   my ($left_count)  = $left_string  =~ /L:(\d+)/;
   my ($right_count) = $right_string =~ /R:(\d+)/;
@@ -155,7 +155,6 @@ foreach my $pos ( keys %matches ) {
     my $pos_sam = join "\n", @sam_lines;
     open POSSAM, ">$sam";
     print POSSAM $pos_sam;
-    print "starting samtools\n";
     `samtools view -bT $genome_fasta $sam > $bam`;
     `samtools sort $bam $sorted_bam`;
     `samtools index $sorted_bam.bam`;
