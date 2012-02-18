@@ -24,8 +24,10 @@ my $mate_file_unpaired = '.unPaired\D*?fq';
 my $workingdir;
 my $outdir   = 'outdir_teSearch';
 my $parallel = 1;
+my $qsub_array = 1;
 GetOptions(
   'p|parallel:i'    => \$parallel,
+  'a|qsub_array:i'    => \$qsub_array,
   'e|exper:s'       => \$exper,
   'w|workingdir:s'  => \$workingdir,
   'o|outdir:s'      => \$outdir,
@@ -40,7 +42,7 @@ GetOptions(
   'h|help'          => \&getHelp,
 );
 my $current_dir;
-
+$qsub_array =0 if $parallel == 0;
 if ( defined $workingdir and -d $workingdir ) {
   $current_dir = File::Spec->rel2abs($workingdir);
   $current_dir =~ s/\/$//;
@@ -131,6 +133,7 @@ options:
 
 **optional:
 -p INT          run each genome sequence separetly, parallel. The alternative (0) would be to run one after the other (int, 0=false or 1=true) [1] 
+-a INT          if running in parallel, run each job as a qsub PBS array (see: man qsub option -t).(int, 0=false or 1=true) [1] 
 -w STR          base working directory, needs to exist, will not create, full path [cwd] 
 -l INT          len cutoff for the te trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (int, ex 0.1) [0] 
@@ -205,6 +208,9 @@ $line\n";
   close(INFASTA);
   close(OUTFASTA);
   ##format genome sequences for bowtie and samtools
+  my $genome_count = 0;
+  open QSUBARRAY, ">$current_dir/$top_dir/shellscripts/run_array.sh" if $qsub_array;
+  open QSUBARRAY1, ">$current_dir/$top_dir/shellscripts/run.step_1.sh" if $qsub_array;
   foreach my $genome_file (@genome_fastas) {
     my @cmds;
 
@@ -223,7 +229,7 @@ $line\n";
     if ( $parallel and @cmds ) {
       my $shell_dir = "$current_dir/$top_dir/shellscripts/step_1";
       `mkdir -p $shell_dir`;
-      open OUTSH, ">$shell_dir/$ref.formatGenome.sh";
+      open OUTSH, ">$shell_dir/$genome_count.formatGenome.sh";
       my $cmd = join "\n", @cmds;
       print OUTSH "$cmd\n";
       close OUTSH;
@@ -241,6 +247,15 @@ $line\n";
         `$cmd`;
       }
     }
+    $genome_count++;
+  }
+  if ($qsub_array){
+    if (!-e "$current_dir/$top_dir/shellscripts/step_1_not_needed_genomefasta_already_formatted" and $qsub_array){
+      print QSUBARRAY "qsub -t 0-$genome_count $current_dir/$top_dir/shellscripts/run.step_1.sh\n";
+      print QSUBARRAY1 "sh $current_dir/$top_dir/shellscripts/step_1/\$PBS_ARRAYID.formatGenome.sh";
+    }elsif ($qsub_array){
+      unlink "$current_dir/$top_dir/shellscripts/run.step_1.sh";
+    }
   }
 }    ##end if($mapping)
 
@@ -248,6 +263,8 @@ my @fq;
 my @fa;
 
 #convert fq files to fa for blat
+open QSUBARRAY2, ">$current_dir/$top_dir/shellscripts/run.step_2.sh" if $qsub_array;
+my $fq_count = 0;
 foreach my $fq (@fq_files) {
   my $fq_path = File::Spec->rel2abs($fq);
   push @fq, $fq_path;
@@ -261,7 +278,7 @@ foreach my $fq (@fq_files) {
         my $fq_name   = pop @fq_path;
         my $shell_dir = "$current_dir/$top_dir/shellscripts/step_2";
         `mkdir -p $shell_dir`;
-        my $outsh = ">$shell_dir/$fq_name" . "2fa.sh";
+        my $outsh = ">$shell_dir/$fq_count" . "fq2fa.sh";
         open OUTSH, ">$outsh";
         print OUTSH "$cmd\n";
       }
@@ -282,8 +299,14 @@ foreach my $fq (@fq_files) {
 "$fq does not seem to be a fastq based on the file extension. It should be fq or fastq\n";
     &getHelp();
   }
+  $fq_count++;
 }
-
+if (!-e "$current_dir/$top_dir/shellscripts/step_2_not_needed_fq_already_converted_2_fa" and $qsub_array){
+  print QSUBARRAY "qsub -t 0-", $fq_count ," $current_dir/$top_dir/shellscripts/run.step_2.sh\n";
+  print QSUBARRAY2 "sh $current_dir/$top_dir/shellscripts/step_2/\$PBS_ARRAYID.fq2fa.sh";
+}elsif ($qsub_array){
+  unlink "$current_dir/$top_dir/shellscripts/run.step_2.sh";
+}
 ##split TE fasta into single record fastas
 my @te_fastas;
 my %TSD;
@@ -335,6 +358,9 @@ foreach my $te_path (@te_fastas) {
   #blat fa files against te.fa
   my @flanking_fq;
   my $fq_file_count = scalar @fq;
+  
+open QSUBARRAY3, ">$current_dir/$top_dir/shellscripts/$TE.run.step_3.sh" if $qsub_array;
+open QSUBARRAY4, ">$current_dir/$top_dir/shellscripts/$TE.run.step_4.sh" if $qsub_array;
   for ( my $i = 0 ; $i < $fq_file_count ; $i++ ) {
     my $fa = $fa[$i];
     my $fq = $fq[$i];
@@ -346,7 +372,7 @@ foreach my $te_path (@te_fastas) {
     if ($parallel) {
       my $shell_dir = "$current_dir/$top_dir/shellscripts/step_3/$TE";
       `mkdir -p $shell_dir`;
-      open OUTSH, ">$shell_dir/$TE.$fa_name.blat.sh";
+      open OUTSH, ">$shell_dir/$i.$TE.blat.sh";
     }
     if ( !-e "$path/blat_output/$fa_name.te_$TE.blatout" ) {
       my $cmd =
@@ -369,9 +395,14 @@ foreach my $te_path (@te_fastas) {
       `$cmd` if !$parallel;
     }
   }
+  if ($qsub_array){
+    print QSUBARRAY "qsub -t 0-", $fq_file_count - 1 ," $current_dir/$top_dir/shellscripts/$TE.run.step_3.sh\n";
+    print QSUBARRAY3 "sh $current_dir/$top_dir/shellscripts/step_3/$TE/\$PBS_ARRAYID.$TE.blat.sh";
+  }
   ##if a genome file was provided, align seqs to genome
   ##if no genome file was provided, will only blat and trim reads of te seq
   if ($mapping) {
+    my $genome_count = 0;
     foreach my $genome_file (@genome_fastas) {
       my $param_path = "$current_dir/$top_dir/$TE";
       my $outregex   = "$param_path/regex.txt";
@@ -388,10 +419,24 @@ foreach my $te_path (@te_fastas) {
         $genome_file =~ /.+\/(.+)\.fa$/;
         my $ref = $1;
         `mkdir -p $shell_dir`;
-        open OUTSH, ">$shell_dir/$TE.$ref.findSites.sh";
+        open OUTSH, ">$shell_dir/$genome_count.$TE.findSites.sh";
         print OUTSH "$cmd\n";
         close OUTSH;
       }
+      $genome_count++;
+    }
+    if ($qsub_array){
+      print QSUBARRAY "qsub -t 0-", $genome_count ," $current_dir/$top_dir/shellscripts/$TE.run.step_4.sh\n";
+      print QSUBARRAY4 "sh $current_dir/$top_dir/shellscripts/step_4/$TE/\$PBS_ARRAYID.$TE.findSites.sh";
     }
   }
+  if ($qsub_array){
+    close QSUBARRAY3;
+    close QSUBARRAY4;
+  }
+}
+if ($qsub_array){
+  close QSUBARRAY;
+  close QSUBARRAY1;
+  close QSUBARRAY2;
 }
