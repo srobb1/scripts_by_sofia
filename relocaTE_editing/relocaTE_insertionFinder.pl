@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 ## 02172012: changed the number of flanking reads that are needed for a 
-## insert to be called from 2 to 3.  Also changed the max allowed mis-
-## matches to 3
+## insert to be called from a total of 2 to (left>1 and right>1) therefore (total>3).  
+## Also changed the max allowed mis-matches to 3
 
 use strict;
 
@@ -88,9 +88,10 @@ foreach my $line (@sorted_bowtie) {
     my @mismatches = split ',' , $mismatch;
     my $mm_count = scalar @mismatches ;
     ## mismatch allowance 1 in every 11 1/11 = 0.09
-    next if ($mm_count/$len) > 0.1 ;
+    #next if ($mm_count/$len) > 0.1 ;
     ## also only 3 allowed total, but only 1 in 11, 2 in 22, 3 in 33 or more
-    next if $mm_count > 3 ;
+    ## only 1 mismatch allowed total
+    next if $mm_count > 1 ;
     my $end = $len + $start - 1;
     next if $target ne $usr_target;
 
@@ -157,7 +158,7 @@ foreach my $insertionEvent ( sort { $a <=> $b } keys %teInsertions ) {
         my $right_count = $teInsertions{$insertionEvent}{$foundTSD}{$start}{right};
         my @reads       = @{ $teInsertions{$insertionEvent}{$foundTSD}{$start}{reads} };
 
-        if (( defined $left_count and defined $right_count ) and ($left_count + $right_count) > 3) {
+        if (( $left_count > 1  and  $right_count > 1 )) {
             $event++;
             my $coor                  = $start + ($TSD_len - 1);
             my $flank_len             = 100;
@@ -192,7 +193,7 @@ my $tableLine = "$TE\t$foundTSD\t$exper\t$usr_target\t$coor\t$left_count\t$right
 }
 print OUTALL
 "
-total confident insertions identified by a right AND left mping flanking sequence (C>2,R>0,L>0)= $event
+total confident insertions identified by a right AND left mping flanking sequence (C>3,R>0,L>0)= $event
 Note:C=total read count, R=right hand read count, L=left hand read count\n" if $event > 0;
 
 sub TSD_check {

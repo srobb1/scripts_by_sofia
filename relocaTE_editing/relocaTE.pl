@@ -159,7 +159,11 @@ GTGACTGGCC
 $outdir =~ s/\/$//;
 my $te_path = File::Spec->rel2abs($te_fasta);
 my $top_dir = $outdir;
-
+if ($qsub_array){
+  `mkdir -p $current_dir/$top_dir/shellscripts`;
+  open QSUBARRAY, ">$current_dir/$top_dir/shellscripts/run_array.sh" or die "Can't open $current_dir/$top_dir/shellscripts/run_array.sh\n";
+  open QSUBARRAY1, ">$current_dir/$top_dir/shellscripts/run.step_1.sh" or die  "Can't open $current_dir/$top_dir/shellscripts/run.stemp_1.sh\n";
+}
 ##split genome file into individual fasta files
 my @genome_fastas;
 if ($mapping) {
@@ -209,8 +213,6 @@ $line\n";
   close(OUTFASTA);
   ##format genome sequences for bowtie and samtools
   my $genome_count = 0;
-  open QSUBARRAY, ">$current_dir/$top_dir/shellscripts/run_array.sh" if $qsub_array;
-  open QSUBARRAY1, ">$current_dir/$top_dir/shellscripts/run.step_1.sh" if $qsub_array;
   foreach my $genome_file (@genome_fastas) {
     my @cmds;
 

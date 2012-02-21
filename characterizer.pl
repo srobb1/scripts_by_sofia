@@ -54,7 +54,7 @@ while ( my $line = <INSITES> ) {
 
   my $Mmatch = 0;
   my $cigar_all;
-  if ( $left_count > 0 and $right_count > 0 ) {
+  if ( $left_count > 1 and $right_count > 1 ) {
     my @sam_all;
     foreach my $bam_file (@bam_files) {
       ## get any alignments that overlap the insertion site
