@@ -7,13 +7,20 @@ open JOBS, "$file_of_array_jobs" or die "Can't open $file_of_array_jobs";
 
 while (my $job = <JOBS>){
   chomp $job;
-  die "not a qsub array job, $job" if $job !~ /qsub\s+\-t/;
+  die "not a qsub job, $job" if $job !~ /qsub/;
+  #warn "not a qsub array job, $job" if $job !~ /qsub\s+\-t/;
   print "checking to see if i can submit: $job\n";
   my $empty_Q = 0;
   while (!$empty_Q){
-    my $status = `qstat | grep robb`;
-    chomp $status;
-    print "status: $status\n";
+    my $status;
+    my @status = `qstat | grep robb`;
+    chomp @status;
+    if (@status > 1){
+      $status = join "\n" , @status;
+    }elsif (@status) {
+      $status = $status[0];
+    }
+    print "status: $status\n" if defined $status;
     if ($status){
       `sleep 5m`;
     }else{

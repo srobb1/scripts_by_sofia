@@ -158,4 +158,13 @@ if ($files2merge){
 }else {
   `touch $merged_bowtie`;
 }
+
+__END__
+my @targets = `grep '>' $genome_file`;
+foreach my $header (@targets){
+   chomp $header;
+   $header =~ s/^>//;
+   my @header = split /\s+/ , $header;
+   my $target = $header[0];
 `$scripts/relocaTE_insertionFinder.pl $merged_bowtie $target $genome_file $TE $regex_file $exper`;
+}

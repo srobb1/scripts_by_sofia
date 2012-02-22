@@ -52,13 +52,13 @@ while ( my $line = <GENOME> ) {
         $genome_seq .= $line;
     }
 }
-
 #remove redundant lines.
 open BOWTIE, "$bowtie" or die "there seems to not be a bowtie file that i can open $!";
 my %bowtie;
 while (my $line = <BOWTIE>){
         chomp $line;
         my @line = split /\t/ , $line;
+        next if $line[2] ne $usr_target;
         my $start = $line[3];
         #remove /1 or /2 from the read name
         #7:12:11277:9907:Y/1     +       Chr1    22134042        TTTTTTATAAATGGATAA      DGGGGGDGGGGFGDGGGG      4       7:A>T,16:C>A
@@ -91,7 +91,7 @@ foreach my $line (@sorted_bowtie) {
     #next if ($mm_count/$len) > 0.1 ;
     ## also only 3 allowed total, but only 1 in 11, 2 in 22, 3 in 33 or more
     ## only 1 mismatch allowed total
-    next if $mm_count > 1 ;
+    next if $mm_count > 3 ;
     my $end = $len + $start - 1;
     next if $target ne $usr_target;
 
@@ -158,7 +158,7 @@ foreach my $insertionEvent ( sort { $a <=> $b } keys %teInsertions ) {
         my $right_count = $teInsertions{$insertionEvent}{$foundTSD}{$start}{right};
         my @reads       = @{ $teInsertions{$insertionEvent}{$foundTSD}{$start}{reads} };
 
-        if (( $left_count > 1  and  $right_count > 1 )) {
+        if (( defined $left_count and defined $right_count and $left_count > 1  and  $right_count > 1 )) {
             $event++;
             my $coor                  = $start + ($TSD_len - 1);
             my $flank_len             = 100;
