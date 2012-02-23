@@ -7,12 +7,13 @@ use File::Spec;
 ## for i in `ls` ; do cat_fq_shell.pl $i prefix; done
 my $dir = shift;
 my $prefix = shift;
+my $tempDir = shift;
 my $clean = shift;
 $prefix = !defined $prefix ? '' : $prefix . '.';
-@clean = !defined $clean ? 1 : 0;
+$clean = !defined $clean ? 1 : 0;
 my $dir_path = File::Spec->rel2abs($dir);
 
-my $tempDir = defined $ARGV[2] ? $ARGV[2]  : '/scratch';
+$tempDir = defined $tempDir ? $tempDir : '/scratch';
 my $current     = File::Spec->curdir();
 my $current_dir = File::Spec->rel2abs($current);
 
@@ -23,7 +24,9 @@ my $one_up = join '/' , @dirs;
 open SH, ">$current_dir/$lowest_dir.cat_fq.sh";
 print SH "#!/bin/bash\n\n";
 
+print SH "echo mktemp\n";
 print SH "tmp_dir=`mktemp --tmpdir=$tempDir -d`\n";
+print SH "echo \"tmp_dir=\$tmp_dir\"\n";
 print SH "cd \$tmp_dir\n";
 
 my $mate_1 = "$lowest_dir"."_1.fq" ; 
@@ -32,11 +35,12 @@ my $unpaired = "$lowest_dir"."_unPaired.fq";
 
 print SH "cat $dir_path/*_1.fq > \$tmp_dir/$mate_1\n"; 
 print SH "cat $dir_path/*_2.fq > \$tmp_dir/$mate_2\n"; 
-print SH "cat $dir_path/*unPaired.fq >  \$tmp_dir/$unpaired.tmp\n";
+print SH "if [ -s $dir_path/$unpaired ] ; then cat $dir_path/*unPaired.fq >  \$tmp_dir/$unpaired.tmp ; fi\n";
+#print SH "cat $dir_path/*unPaired.fq >  \$tmp_dir/$unpaired.tmp\n";
 
 if ($clean){
-  print SH "clean_pairs.pl \$tmp_dir/$mate_1 \$tmp_dir/$mate_2 > \$tmp_dir/$unpaired.tmp2\n";
-  print SH "cat \$tmp_dir/$unpaired.tmp \$tmp_dir/$unpaired.tmp2 > \$tmp_dir/$unpaired\n";
+  print SH "clean_pairs.pl -1 \$tmp_dir/$mate_1 -2 \$tmp_dir/$mate_2 > \$tmp_dir/$unpaired.tmp2\n";
+  print SH "if [ -e \$tmp_dir/$unpaired.tmp ] ; then cat \$tmp_dir/$unpaired.tmp \$tmp_dir/$unpaired.tmp2 > \$tmp_dir/$unpaired ; else mv \$tmp_dir/$unpaired.tmp2 \$tmp_dir/$unpaired ; fi\n";
   $mate_1 = "$lowest_dir"."_1.matched.fq"; 
   $mate_2 = "$lowest_dir"."_2.matched.fq"; 
 }

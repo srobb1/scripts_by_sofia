@@ -9,9 +9,10 @@ use File::Spec;
 # for i in `ls` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl $i EG4_500bp; done
 my $dir = shift;
 my $prefix = shift;
+my $tempDir = shift;
 $prefix = !defined $prefix ? '' : $prefix.'.'; 
+$tempDir = defined $tempDir ? $tempDir  : '/scratch';
 my $dir_path = File::Spec->rel2abs($dir);
-my $tempDir = defined $ARGV[2] ? $ARGV[2]  : '/scratch';
 my $current     = File::Spec->curdir();
 my $current_dir = File::Spec->rel2abs($current);
 

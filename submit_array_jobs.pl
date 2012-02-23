@@ -4,7 +4,8 @@ use strict;
 
 my $file_of_array_jobs = shift;
 open JOBS, "$file_of_array_jobs" or die "Can't open $file_of_array_jobs";
-
+my $usrname = `whoami`;
+chomp $usrname;
 while (my $job = <JOBS>){
   chomp $job;
   die "not a qsub job, $job" if $job !~ /qsub/;
@@ -13,7 +14,7 @@ while (my $job = <JOBS>){
   my $empty_Q = 0;
   while (!$empty_Q){
     my $status;
-    my @status = `qstat | grep robb`;
+    my @status = `qstat | grep $usrname`;
     chomp @status;
     if (@status > 1){
       $status = join "\n" , @status;

@@ -165,7 +165,7 @@ my $te_path = File::Spec->rel2abs($te_fasta);
 my $top_dir = $outdir;
 if ($qsub_array){
   `mkdir -p $current_dir/$top_dir/shellscripts`;
-  open QSUBARRAY, ">$current_dir/$top_dir/shellscripts/run_array.sh" or die "Can't open $current_dir/$top_dir/shellscripts/run_array.sh\n";
+  open QSUBARRAY, ">$current_dir/$top_dir/run_these_jobs.sh" or die "Can't open $current_dir/$top_dir/run_these_jobs.sh\n";
   #open QSUBARRAY1, ">$current_dir/$top_dir/shellscripts/run.step_1.sh" or die  "Can't open $current_dir/$top_dir/shellscripts/run.stemp_1.sh\n";
 }
 ##split genome file into individual fasta files
@@ -380,6 +380,7 @@ open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh" if $qsu
     if ($parallel) {
       print OUTSH "$cmd\n";
       close OUTSH;
+      `chmod +x $shell_dir/*blat.sh`;
     }
     else {
       `$cmd` if !$parallel;
@@ -432,6 +433,7 @@ open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh" if $qsu
         open OUTSH, ">$shell_dir/$genome_count.$TE.findSites.sh";
         print OUTSH "$cmd\n";
         close OUTSH;
+        `chmod +x $shell_dir/*findSites.sh`;
       }
       $genome_count++;
     }
