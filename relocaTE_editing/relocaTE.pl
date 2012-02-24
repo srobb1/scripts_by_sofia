@@ -359,8 +359,8 @@ open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh" if $qsu
     my @fa_path = split '/', $fa;
     my $fa_name = pop @fa_path;
     $fa_name =~ s/\.fa$//;
+    my $shell_dir = "$current_dir/$top_dir/shellscripts/step_3/$TE";
     if ($parallel) {
-      my $shell_dir = "$current_dir/$top_dir/shellscripts/step_3/$TE";
       `mkdir -p $shell_dir`;
       open OUTSH, ">$shell_dir/$i.$TE.blat.sh";
     }

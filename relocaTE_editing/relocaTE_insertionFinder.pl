@@ -174,7 +174,7 @@ my $tableLine = "$TE\t$foundTSD\t$exper\t$usr_target\t$coor\t$left_count\t$right
             print OUTTABLE $tableLine;
             print OUTALLTABLE $tableLine;
             print OUTGFF
-"$usr_target\t$foundTSD\t$exper\ttransposable_element_insertion_site\t$coor\t$coor\t.\t.\t.\tID=$TE.te_insertion_site.$usr_target.$coor; left_flanking_read_count=$left_count; right_flanking_read_count=$right_count; left_flanking_seq=$left_flanking_ref_seq; right_flanking_seq=$right_flanking_ref_seq\n";
+"$usr_target\t$exper\ttransposable_element_insertion_site\t$coor\t$coor\t.\t.\t.\tID=$TE.te_insertion_site.$usr_target.$coor;left_flanking_read_count=$left_count;right_flanking_read_count=$right_count;left_flanking_seq=$left_flanking_ref_seq;right_flanking_seq=$right_flanking_ref_seq;TSD=$foundTSD\n";
             print OUTFASTA
 ">$exper.$usr_target.$coor TSD=$foundTSD $usr_target:$seq_start..$seq_end\n$left_flanking_ref_seq$right_flanking_ref_seq\n";
             print OUTALL

@@ -27,6 +27,27 @@ my %lengths;
 my @features_type = $db->get_features_by_type($query_type);
 my $total_insertion_count = scalar @features_type;
 
+my %sources;
+my %distance;
+my @data;
+
+foreach my $feature (@features_type) {
+  my $source = $feature->source;	
+  $sources{$source}=1;
+}
+foreach my $source (sort keys %sources){
+  my %inserts;
+  my %insert_dfs;
+  my %insert_dfe;
+  my %features;
+  my %strains;
+  my %each;
+  my %lengths;
+  %distance = ();
+  @data = ();
+  @features_type = $db->features(
+                            -type => $query_type,
+                            -source => $source);
 foreach my $feature (@features_type) {
   my $source = $feature->source;	
   my $name  = $feature->name;
@@ -145,7 +166,20 @@ foreach my $ref (keys %each){
       my $dfs = $each{$ref}{$start}{$insert_feature}{dfs};
       my $dfe = $each{$ref}{$start}{$insert_feature}{dfe};
       my $source = $each{$ref}{$start}{$insert_feature}{source};
+      my $g2r = $each{$ref}{$start}{$insert_feature}{gene2right};
+      my $g2l = $each{$ref}{$start}{$insert_feature}{gene2left};
       my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
+      if ($insert_feature =~ /intergenic/){
+        if ($dfe < 500 and $g2r == 1){
+          $features{promoter}++;
+          $strains{$source}{insert_feature}{promoter}++;
+          $inserts{$insert_type}{promoter}++;
+        }elsif ($dfs < 500 and $g2l == -1){
+          $features{promoter}++;
+          $strains{$source}{insert_feature}{promoter}++;
+          $inserts{$insert_type}{promoter}++;
+        }
+      }
       push @{$insert_dfs{$insert_feature}} , $dfs; 
       push @{$insert_dfe{$insert_feature}} , $dfe; 
       $features{$insert_feature}++;
@@ -393,8 +427,6 @@ foreach my $ref (sort keys %each){
   }
 }
 ##distance from up and downstream genes
-my %distance;
-my @data;
 
 
 foreach my $i_type ( sort keys %intergenic ) {
@@ -472,8 +504,9 @@ foreach my $desc ( sort keys %distance ) {
   $title =~s/\)//;
   my $r_script = $fn.".R.sh";
   my $r_data = $fn."R.data";
-  open OUTRSH, ">$r_script";
-  open OUTRDATA, ">$r_data";
+  `mkdir -p $source`;
+  open OUTRSH, ">$source/$r_script";
+  open OUTRDATA, ">$source/$r_data";
   my $y_lab;
   my $header;
   my $x_lab;
@@ -600,7 +633,7 @@ foreach my $type ( sort keys %insert_dfs ) {
 
 
 print $toPrint;
-
+}##end foreach @sources
 
 sub getBins {
     my $array_ref      = shift;

@@ -138,7 +138,7 @@ while ( my $line = <INSITES> ) {
     print "$exp\t$te\t$TSD\t$chromosome.$pos\t$average_flankers\t$spanners\t$status\n"
       ;    #\t$Smatch\t$cigar_all\n";
     print OUTGFF
-"$chromosome\t$exp\ttransposable_element_attribute\t$pos\t$pos\t.\t.\t.\tID=$chromosome.$pos.spanners;avg_flankers=$average_flankers;spanners=$spanners;type=$status;TE=$te,TSD=$TSD\n";
+"$chromosome\t$exp\ttransposable_element_attribute\t$pos\t$pos\t.\t.\t.\tID=$chromosome.$pos.spanners;avg_flankers=$average_flankers;spanners=$spanners;type=$status;TE=$te;TSD=$TSD\n";
 
 #print "$chromosome.$pos\t$total_count\t$left_count\t$right_count\t$Mmatch\t$status\n";#\t$Smatch\t$cigar_all\n";
   }
