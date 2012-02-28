@@ -137,13 +137,13 @@ options:
 
 **optional:
 -p INT          run each genome sequence separetly, parallel. The alternative (0) would be to run one after the other (int, 0=false or 1=true) [1] 
--a INT          if running in parallel, run each job as a qsub PBS array (see: man qsub option -t).(int, 0=false or 1=true) [1] 
+-a INT          if running in parallel, run jobs as a qsub PBS array when many are creaated (see: man qsub option -t).(int, 0=false or 1=true) [1] 
 -w STR          base working directory, needs to exist, will not create, full path [cwd] 
--l INT          len cutoff for the te trimmed reads to be aligned [10] 
--m FRACTION     mismatch allowance for alignment to TE (int, ex 0.1) [0] 
--1 STR		regular expression to identify mate 1 paired files [_1\D*?fq]
--2 STR          regular expression to identify mate 2 paired files [_2\D*?fq]
--u STR          regular expression to identify unpaied files [.unPaired\D*?fq] 
+-l INT          len cutoff for the TE trimmed reads to be aligned [10] 
+-m FRACTION     mismatch allowance for alignment to TE (ex 0.1) [0] 
+-1 STR		regular expression to identify mate 1 paired files ex: file_1.fq or file_1.noNumbers.fq [_1\D*?fq]
+-2 STR          regular expression to identify mate 2 paired files ex: file_2.fq or file_2.noNumbers.fq [_2\D*?fq]
+-u STR          regular expression to identify unpaired files [.unPaired\D*?fq] 
 -h              this message
 
 SAMPLE TE FASTA
@@ -156,6 +156,11 @@ CTTGTATCAATTAAATGCTTTGCTTAGTCTTGGAAACGTCAAAGTGAAACCCCTCCACTGTGGGGATTGT
 TTCATAAAAGATTTCATTTGAGAGAAGATGGTATAATATTTTGGGTAGCCGTGCAATGACACTAGCCATT
 GTGACTGGCC
 
+Must contain "TSD=", can be a Perl regular express.  
+  Example: any 4 characters: TSD=....
+  Example: A or T followed by GCC: TSD=(A|T)GCC 
+  Example: CGA followed by any character then an A then CT or G: TSD=CGA.A(CT|G) 
+
 ';
 
   exit 1;
@@ -166,12 +171,10 @@ my $top_dir = $outdir;
 if ($qsub_array){
   `mkdir -p $current_dir/$top_dir/shellscripts`;
   open QSUBARRAY, ">$current_dir/$top_dir/run_these_jobs.sh" or die "Can't open $current_dir/$top_dir/run_these_jobs.sh\n";
-  #open QSUBARRAY1, ">$current_dir/$top_dir/shellscripts/run.step_1.sh" or die  "Can't open $current_dir/$top_dir/shellscripts/run.stemp_1.sh\n";
 }
 ##split genome file into individual fasta files
 my @genome_fastas;
 if ($mapping) {
-  #my $genome_path = File::Spec->rel2abs($genomeFasta);
   open( INFASTA, "$genome_path" ) || die "$!\n";
   my $i = 0;
   my $exists = 0;
@@ -427,8 +430,6 @@ open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh" if $qsu
       }
       else {
         my $shell_dir = "$current_dir/$top_dir/shellscripts/step_5/$TE";
-        #$genome_file =~ /.+\/(.+)\.fa$/;
-        #my $ref = $1;
         `mkdir -p $shell_dir`;
         open OUTSH, ">$shell_dir/$genome_count.$TE.findSites.sh";
         print OUTSH "$cmd\n";

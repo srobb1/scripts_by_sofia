@@ -151,6 +151,7 @@ foreach my $ref (sort keys %ref){
 }
 open GFF, ">intergenic.gff" or die "Can't open intergenic.gff for writing\n";
 my $promoters;
+my $threeprime;
 foreach my $ref (sort keys %intergenic){
   foreach my $start (sort {$a <=> $b} keys %{$intergenic{$ref}}){
     my $end = $intergenic{$ref}{$start}{end};
@@ -163,7 +164,13 @@ foreach my $ref (sort keys %intergenic){
     }if ($gene_2_left_strand < 0){
       $promoters++;
     }
+    if ($gene_2_right_strand < 0 ){
+      $threeprime++;
+    }if ($gene_2_left_strand > 0){
+      $threeprime++;
+    }
     #print "$gene_2_left_strand\t$ref:$start..$end($len)\t$gene_2_right_strand\n";
   }
 }
 print "promoter count = $promoters, promoter bp = ",$promoters * 500 ,"\n";
+print "threeprime count = $threeprime, threeprime bp = ",$threeprime * 500 ,"\n";

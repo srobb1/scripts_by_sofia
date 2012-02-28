@@ -170,14 +170,23 @@ foreach my $ref (keys %each){
       my $g2l = $each{$ref}{$start}{$insert_feature}{gene2left};
       my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
       if ($insert_feature =~ /intergenic/){
-        if ($dfe < 500 and $g2r == 1){
+        if ($dfe <= 500 and $g2r == 1 and $dfe < $dfs){
           $features{promoter}++;
           $strains{$source}{insert_feature}{promoter}++;
           $inserts{$insert_type}{promoter}++;
-        }elsif ($dfs < 500 and $g2l == -1){
+        }elsif ($dfs <= 500 and $g2l == -1 and $dfs < $dfe){
           $features{promoter}++;
           $strains{$source}{insert_feature}{promoter}++;
           $inserts{$insert_type}{promoter}++;
+        }
+        if ($dfe <= 500 and $g2r == -1 and $dfe < $dfs){
+          $features{threeprime}++;
+          $strains{$source}{insert_feature}{threeprime}++;
+          $inserts{$insert_type}{threeprime}++;
+        }elsif ($dfs <= 500 and $g2l == 1 and $dfs < $dfe){
+          $features{threeprime}++;
+          $strains{$source}{insert_feature}{threeprime}++;
+          $inserts{$insert_type}{threeprime}++;
         }
       }
       push @{$insert_dfs{$insert_feature}} , $dfs; 

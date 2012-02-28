@@ -7,6 +7,10 @@ use File::Spec;
 # for i in `seq 1 12` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl  Chr$i HEG4_25x; done
 #  or
 # for i in `ls` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl $i EG4_500bp; done
+if (!defined @ARGV){
+  print "run command like this: for i in `ls` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl \$i prefix [tempDir:/scratch]; done\n";
+  die   "or                   : for i in `seq 1 12` ; do ~/bin/merge_bam_and_create_merged_sam_shell.pl \$i prefix [tempDir:/scratch]; done\n";
+}
 my $dir = shift;
 my $prefix = shift;
 my $tempDir = shift;

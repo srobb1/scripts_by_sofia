@@ -89,8 +89,7 @@ foreach my $line (@sorted_bowtie) {
     my $mm_count = scalar @mismatches ;
     ## mismatch allowance 1 in every 11 1/11 = 0.09
     #next if ($mm_count/$len) > 0.1 ;
-    ## also only 3 allowed total, but only 1 in 11, 2 in 22, 3 in 33 or more
-    ## only 1 mismatch allowed total
+    ## only 3 mismatch allowed total
     next if $mm_count > 3 ;
     my $end = $len + $start - 1;
     next if $target ne $usr_target;
@@ -141,7 +140,7 @@ open OUTTABLE, ">$results_dir/$usr_target.$TE.te_insertion_sites.table.txt"  or 
 open OUTLIST,  ">$results_dir/$usr_target.$TE.te_insertion_sites.reads.list" or die $!;
 open OUTALLTABLE, ">>$results_dir/all.$TE.te_insertion_sites.table.txt"  or die $!;
 print OUTGFF "##gff-version	3\n";
-##output for students in tab delimited table
+##output in tab delimited table
 my $tableHeader = "TE\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\n";
 print OUTTABLE $tableHeader;
 print OUTALLTABLE $tableHeader if -s "$results_dir/all.$TE.te_insertion_sites.table.txt" < 100;

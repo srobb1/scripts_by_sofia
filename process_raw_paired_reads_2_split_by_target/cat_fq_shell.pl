@@ -5,6 +5,10 @@ use File::Spec;
 #provide the direcotry name
 ## for multiple directories try this:
 ## for i in `ls` ; do cat_fq_shell.pl $i prefix; done
+if (!defined @ARGV){
+  die "run command like this: for i in `ls` ; do cat_fq_shell.pl \$i prefix [/tmp_dir default:/sractch] [clean 1|0 default:1]; done\n";
+}
+
 my $dir = shift;
 my $prefix = shift;
 my $tempDir = shift;
