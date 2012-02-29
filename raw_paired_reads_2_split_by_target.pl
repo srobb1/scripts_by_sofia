@@ -156,12 +156,12 @@ foreach my $sample ( sort keys %files ) {
       push @trim_filter,
 "fastq_quality_trimmer -Q$Q -l $minLength -t $minQuality -i $dir_path/$file.$fq_ext |fastq_quality_filter -Q$Q -q $minQuality -p $minPercent -v -o \$tmp_dir/$file.trimmed.filtered.fq";
       push @aln,
-"bwa aln -t 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
+"bwa aln -t 4 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
     }
     else {
       print OUTFILE "ln -s $dir_path/$file.$fq_ext \$tmp_dir/.\n";
       push @aln,
-"bwa aln -t 10 -q 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
+"bwa aln -t 4 -q 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
     }
 
   }

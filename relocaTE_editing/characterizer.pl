@@ -175,7 +175,7 @@ foreach my $pos ( keys %matches ) {
 `samtools mpileup -C50 -ugf $genome_fasta -r $range  $sorted_bam.bam | bcftools view -bvcg - > $cwd/$pos.var.raw.bcf`;
 `bcftools view $cwd/$pos.var.raw.bcf | vcfutils.pl varFilter -D 100 > $cwd/$pos.var.flt.vcf`;
 
-    push @unlink_files, $sam, $bam, "$sorted_bam.bam", "$cwd/$pos.var.raw.bcf";
+    push @unlink_files, $sam, $bam, "$sorted_bam.bam.bai","$sorted_bam.bam", "$cwd/$pos.var.raw.bcf";
     close POSSAM;
   }
 }
