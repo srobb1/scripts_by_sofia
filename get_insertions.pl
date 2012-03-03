@@ -516,6 +516,7 @@ foreach my $desc ( sort keys %distance ) {
   `mkdir -p $source`;
   open OUTRSH, ">$source/$r_script";
   open OUTRDATA, ">$source/$r_data";
+  print OUTRSH "#run with: R -f $fn.R.sh\n";
   my $y_lab;
   my $header;
   my $x_lab;
@@ -547,6 +548,7 @@ dev.off()
   my $i++;
   print "$desc\n";
   print "$y_lab\n";
+  print "total insertions = $total_insertion_count\n";
   my $last_bin = 0;
   foreach my $bin ( sort { $a <=> $b } keys %{ $distance{$desc} } ){
     my $type_count = 0;
@@ -593,14 +595,16 @@ else{ ##no normalization for seq depth
  $calculation = $count / ( $bin - $last_bin );
 }
 if ($per_total){
+ ##caluculation is count/total_inserts
  $calculation = $count / $total_insertion_count;
 }
-        if ($desc =~ /relative/){
+        #if ($desc =~ /relative/){ ##not sure why i did this
+        if (!$per_total){
 	  print OUTRDATA "$type\t$bin\t$count\n";
           print $count;
         }else{
 	  print OUTRDATA "$type\t$bin\t$calculation\n";
-          print $calculation;
+          print $count; 
         }
         if ( $type_count == scalar @types ) {
           print "\n";

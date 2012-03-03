@@ -86,10 +86,12 @@ foreach my $feature (@features_type) {
        my $gene2left_ref = $attr{'downstream_gene'};
        my $upstream = ${$gene2right_ref}[0];
        my $downstream = ${$gene2left_ref}[0];
-       $upstream =~ s/.+\((\+|\-)\)$/$1/;
-       $downstream =~ s/.+\((\+|\-)\)$/$1/;
-       $gene2right = $upstream eq '+' ? 1 : -1;
-       $gene2left = $downstream eq '+' ? 1 : -1;
+       #$upstream =~ s/.+\((\+|\-)\)$/$1/;
+       #$downstream =~ s/.+\((\+|\-)\)$/$1/;
+       #$gene2right = $upstream eq '+' ? 1 : -1;
+       #$gene2left = $downstream eq '+' ? 1 : -1;
+       $gene2right = $upstream;
+       $gene2left = $downstream;
      } 
      if ( ($type eq 'three_prime_UTR' or $type eq 'five_prime_UTR') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{intron}) ){
         delete $each{$ref}{$start}{exon} if exists $each{$ref}{$start}{exon} ;
