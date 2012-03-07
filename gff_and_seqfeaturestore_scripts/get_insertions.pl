@@ -282,16 +282,32 @@ foreach my $ref (sort keys %each){
       if ($insert_feature eq 'intergenic') {## all intergenic regions 
         push @{$intergenic{all}{all_intergenic}{rel}} , $rel_pos; 
         push @{$intergenic{$insert_type}{all_intergenic}{rel}} , $rel_pos; 
-        push @{$intergenic{all}{all_intergenic}{dug}} , $dfe if $g2r > 0;#g2r == +1
-        push @{$intergenic{all}{all_intergenic}{dug}} , $dfs if $g2l < 0;#g2l == -1
-        push @{$intergenic{all}{all_intergenic}{ddg}} , $dfe if $g2r < 0;#g2r == -1
-        push @{$intergenic{all}{all_intergenic}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        if ($orientation == 2 and $dfe < $dfs){ ## <-- -->, only want the closest 5' not both
+          push @{$intergenic{all}{all_intergenic}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{$insert_type}{all_intergenic}{dug}} , $dfe if $g2r > 0;#g2r == +1
+        }elsif($orientation == 2 and $dfs < $dfe){
+          push @{$intergenic{all}{all_intergenic}{dug}} , $dfs if $g2l < 0;#g2l == -1
+          push @{$intergenic{$insert_type}{all_intergenic}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        }else {
+          push @{$intergenic{all}{all_intergenic}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{$insert_type}{all_intergenic}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{all}{all_intergenic}{dug}} , $dfs if $g2l < 0;#g2l == -1
+          push @{$intergenic{$insert_type}{all_intergenic}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        }
+        if ($orientation == 0 and $dfe < $dfs){ ## --> <-- only want the closest 3' not both
+          push @{$intergenic{all}{all_intergenic}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{$insert_type}{all_intergenic}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+        }elsif ($orientation == 0 and $dfs < $dfe){
+          push @{$intergenic{all}{all_intergenic}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        push @{$intergenic{$insert_type}{all_intergenic}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        }else{
+          push @{$intergenic{all}{all_intergenic}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{all}{all_intergenic}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+          push @{$intergenic{$insert_type}{all_intergenic}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{$insert_type}{all_intergenic}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        }
         push @{$intergenic{all}{all_intergenic}{dfe}} , $dfe;
         push @{$intergenic{all}{all_intergenic}{dfs}} , $dfs;
-        push @{$intergenic{$insert_type}{all_intergenic}{dug}} , $dfe if $g2r > 0;#g2r == +1
-        push @{$intergenic{$insert_type}{all_intergenic}{dug}} , $dfs if $g2l < 0;#g2l == -1
-        push @{$intergenic{$insert_type}{all_intergenic}{ddg}} , $dfe if $g2r < 0;#g2r == -1
-        push @{$intergenic{$insert_type}{all_intergenic}{ddg}} , $dfs if $g2l > 0;#g2l == +1
         push @{$intergenic{$insert_type}{all_intergenic}{dfe}} , $dfe;
         push @{$intergenic{$insert_type}{all_intergenic}{dfs}} , $dfs;
 
@@ -334,17 +350,32 @@ foreach my $ref (sort keys %each){
         push @{$intergenic{all}{gt_5000}{rel}} , $rel_pos; 
         push @{$intergenic{$insert_type}{gt_5000}{rel}} , $rel_pos; 
         
-
-        push @{$intergenic{all}{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
-        push @{$intergenic{all}{gt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
-        push @{$intergenic{all}{gt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
-        push @{$intergenic{all}{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        if ($orientation == 2 and $dfe < $dfs){ ## <-- -->, only want the closest 5' not both
+          push @{$intergenic{all}{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{$insert_type}{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+        }elsif($orientation == 2 and $dfs < $dfe){
+          push @{$intergenic{all}{gt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+          push @{$intergenic{$insert_type}{gt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        }else{
+          push @{$intergenic{all}{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{all}{gt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+          push @{$intergenic{$insert_type}{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{$insert_type}{gt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        }
+        if ($orientation == 0 and $dfe < $dfs){ ## --> <-- only want the closest 3' not both
+          push @{$intergenic{all}{gt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{$insert_type}{gt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+        }elsif ($orientation == 0 and $dfs < $dfe){
+          push @{$intergenic{all}{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+          push @{$intergenic{$insert_type}{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        }else{
+          push @{$intergenic{all}{gt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{all}{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+          push @{$intergenic{$insert_type}{gt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{$insert_type}{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        }
         push @{$intergenic{all}{gt_5000}{dfe}} , $dfe;
         push @{$intergenic{all}{gt_5000}{dfs}} , $dfs;
-        push @{$intergenic{$insert_type}{gt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
-        push @{$intergenic{$insert_type}{gt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
-        push @{$intergenic{$insert_type}{gt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
-        push @{$intergenic{$insert_type}{gt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
         push @{$intergenic{$insert_type}{gt_5000}{dfe}} , $dfe;
         push @{$intergenic{$insert_type}{gt_5000}{dfs}} , $dfs;
 
@@ -386,17 +417,32 @@ foreach my $ref (sort keys %each){
         ##    downstream gene implies 3' end
         push @{$intergenic{all}{lt_5000}{rel}} , $rel_pos; 
         push @{$intergenic{$insert_type}{lt_5000}{rel}} , $rel_pos; 
-
-        push @{$intergenic{all}{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
-        push @{$intergenic{all}{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
-        push @{$intergenic{all}{lt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
-        push @{$intergenic{all}{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        if ($orientation == 2 and $dfe < $dfs){ ## <-- -->, only want the closest 5' not both
+          push @{$intergenic{all}{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{$insert_type}{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+        }elsif($orientation == 2 and $dfs < $dfe){
+          push @{$intergenic{all}{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+          push @{$intergenic{$insert_type}{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        }else{
+          push @{$intergenic{all}{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{all}{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+          push @{$intergenic{$insert_type}{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
+          push @{$intergenic{$insert_type}{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
+        }
+        if ($orientation == 0 and $dfe < $dfs){ ## --> <-- only want the closest 3' not both
+          push @{$intergenic{all}{lt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{$insert_type}{lt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+        }elsif ($orientation == 0 and $dfs < $dfe){
+          push @{$intergenic{all}{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+          push @{$intergenic{$insert_type}{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        }else{
+          push @{$intergenic{all}{lt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{all}{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+          push @{$intergenic{$insert_type}{lt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
+          push @{$intergenic{$insert_type}{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
+        }
         push @{$intergenic{all}{lt_5000}{dfe}} , $dfe;
         push @{$intergenic{all}{lt_5000}{dfs}} , $dfs;
-        push @{$intergenic{$insert_type}{lt_5000}{dug}} , $dfe if $g2r > 0;#g2r == +1
-        push @{$intergenic{$insert_type}{lt_5000}{dug}} , $dfs if $g2l < 0;#g2l == -1
-        push @{$intergenic{$insert_type}{lt_5000}{ddg}} , $dfe if $g2r < 0;#g2r == -1
-        push @{$intergenic{$insert_type}{lt_5000}{ddg}} , $dfs if $g2l > 0;#g2l == +1
         push @{$intergenic{$insert_type}{lt_5000}{dfe}} , $dfe;
         push @{$intergenic{$insert_type}{lt_5000}{dfs}} , $dfs;
         if ($orientation == 1 or $orientation == -1){
