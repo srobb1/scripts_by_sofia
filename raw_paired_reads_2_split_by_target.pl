@@ -6,7 +6,7 @@ use File::Basename;
 
 ## trims and filters reads, aligns to genome, splits by target.
 ## produces fq, sam and bam files for each individual target
-
+my $scripts_dir = '/home_stajichlab/robb/bin';
 my $dir = '.';
 my $genomeFasta;
 my ( $minLength, $minQuality, $minPercent ) = ( 50, 20, 80 );
@@ -109,7 +109,7 @@ if ($split) {
     my ( $volume, $directories, $filename ) = File::Spec->splitpath($file);
     next unless ( $filename =~ /((\S+)($mate_1_id|$mate_2_id))\.(fastq|fq)$/ );
     my ( $filename_base, $sampleName, $pairID, $suffix ) = ( $1, $2, $3, $4 );
-    `~/bin/fastq_split.pl -s 1000000 -o split_by_number_fq/ $dir_path/$file`;
+    `$scripts_dir/fastq_split.pl -s 1000000 -o split_by_number_fq/ $dir_path/$file`;
   }
 }
 if ($split) {
@@ -156,12 +156,12 @@ foreach my $sample ( sort keys %files ) {
       push @trim_filter,
 "fastq_quality_trimmer -Q$Q -l $minLength -t $minQuality -i $dir_path/$file.$fq_ext |fastq_quality_filter -Q$Q -q $minQuality -p $minPercent -v -o \$tmp_dir/$file.trimmed.filtered.fq";
       push @aln,
-"bwa aln -t 4 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
+"bwa aln -t 8 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
     }
     else {
       print OUTFILE "ln -s $dir_path/$file.$fq_ext \$tmp_dir/.\n";
       push @aln,
-"bwa aln -t 4 -q 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
+"bwa aln -t 8 -q 10 $genome_path \$tmp_dir/$file$desc.matched$ext > \$tmp_dir/$file$desc.matched.sai";
     }
 
   }
@@ -172,26 +172,26 @@ foreach my $sample ( sort keys %files ) {
   if ( $pairs == 2 ) {
     ( $pair1, $pair2 ) = sort @${ $files{$sample} };
     push @clean,
-"~/bin/clean_pairs.pl -1 \$tmp_dir/$pair1$desc$ext -2 \$tmp_dir/$pair2$desc$ext > \$tmp_dir/$sample.unPaired.fq";
+"$scripts_dir/clean_pairs.pl -1 \$tmp_dir/$pair1$desc$ext -2 \$tmp_dir/$pair2$desc$ext > \$tmp_dir/$sample.unPaired.fq";
     ##after cleaning the 2 paired files a file of unPaired reads is generated
     ##run bwa aln on this file
     ##and bwa samse
     push @clean,
-"if [ -s \$tmp_dir/$sample.unPaired.fq ] ; then bwa aln -t 10 $genome_path \$tmp_dir/$sample.unPaired.fq > \$tmp_dir/$sample.unPaired.sai ; fi";
+"if [ -s \$tmp_dir/$sample.unPaired.fq ] ; then bwa aln -t 8 $genome_path \$tmp_dir/$sample.unPaired.fq > \$tmp_dir/$sample.unPaired.sai ; fi";
     push @clean,
 "if [ -e \$tmp_dir/$sample.unPaired.sai ] ; then bwa samse  $genome_path \$tmp_dir/$sample.unPaired.sai \$tmp_dir/$sample.unPaired.fq   > \$tmp_dir/$sample.unPaired.sam ; fi";
     push @split_sam_by_target,
-"if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then ~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.unPaired.sam ; fi"
+"if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then $scripts_dir/splitSam_byTarget.pl -s \$tmp_dir/$sample.unPaired.sam ; fi"
       if $bin_per_chrom;
     push @sam,
 "bwa sampe -a $insertLength $genome_path \$tmp_dir/$pair1$desc.matched.sai \$tmp_dir/$pair2$desc.matched.sai \$tmp_dir/$pair1$desc.matched$ext \$tmp_dir/$pair2$desc.matched$ext  > \$tmp_dir/$sample.sam";
     if ($bin_per_chrom) {
       push @split_sam_by_target,
-        "~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.sam";
+        "$scripts_dir/splitSam_byTarget.pl -s \$tmp_dir/$sample.sam";
       push @sam2fq,
-"for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/sam2fq.pl \$tmp_dir/split_by_target/\$i ; done";
+"for i in `ls \$tmp_dir/split_by_target` ; do $scripts_dir/sam2fq.pl \$tmp_dir/split_by_target/\$i ; done";
       push @sam2bam,
-"for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/sam2bam.pl \$tmp_dir/split_by_target/\$i $genome_path $sample; done";
+"for i in `ls \$tmp_dir/split_by_target` ; do $scripts_dir/sam2bam.pl \$tmp_dir/split_by_target/\$i $genome_path $sample; done";
     }
   }
   elsif ( $pairs == 1 ) {
@@ -199,7 +199,7 @@ foreach my $sample ( sort keys %files ) {
     push @sam,
 "bwa samse $genome_path \$tmp_dir/$pair1$desc.sai \$tmp_dir/$pair1$desc.fq   > \$tmp_dir/$sample.sam";
     push @split_sam_by_target,
-      "~/bin/splitSam_byTarget.pl -s \$tmp_dir/$sample.sam";
+      "$scripts_dir/splitSam_byTarget.pl -s \$tmp_dir/$sample.sam";
   }
   else {
     warn
@@ -300,7 +300,7 @@ foreach my $sample ( sort keys %files ) {
     print OUTFILE
 "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/bam_split_by_chromosome/\$i ; done\n";
     print OUTFILE
-"for i in `ls \$tmp_dir/split_by_target` ; do ~/bin/move_files.pl \$tmp_dir/split_by_target/\$i $current_dir; done\n";
+"for i in `ls \$tmp_dir/split_by_target` ; do $scripts_dir/move_files.pl \$tmp_dir/split_by_target/\$i $current_dir; done\n";
   }
   print OUTFILE "cd $current_dir\n";
 

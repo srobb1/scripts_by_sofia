@@ -9,11 +9,14 @@ my $GO = shift;
 
 my %GO;
 my %GO_genes;
+my %enrichment;
 open GO, $GO or die "can't open $GO\n";
 while ( my $line = <GO> ) {
   next if $line =~ /GOSlim_acc/;
   chomp $line;
   my ( $model, $GOSlim_acc, $GOSlim_name, $aspect ) = split /\t/, $line;
+  next if $aspect ne 'F';
+  next if $GOSlim_acc eq 'GO:0003674';
   $GO{$GOSlim_acc}{model}       = $model;
   $GO{$GOSlim_acc}{GOSlim_name} = $GOSlim_name;
   $GO{$GOSlim_acc}{aspect}      = $aspect;
@@ -47,6 +50,17 @@ while ( my $line = <INFILE> ) {
       }
       my $go = get_go($gene);
       print "$ref:$start\t$gene\t$insert_feature\t$insert_type\t$go\n";
+      if (defined $go and $go ne ''){
+        foreach my $go (split ';' , $go){
+        my ($acc,$aspect,$desc) = split ',' , $go ;
+        $enrichment{all}{all}{$acc}{desc}=$desc;
+        $enrichment{all}{all}{$acc}{count}++;
+        $enrichment{$insert_type}{$insert_feature}{$acc}{desc}=$desc;
+        $enrichment{$insert_type}{$insert_feature}{$acc}{count}++;
+        $enrichment{$insert_type}{all}{$acc}{desc}=$desc;
+        $enrichment{$insert_type}{all}{$acc}{count}++;
+        }
+      }
     }
     elsif ( $dfe < $dfs and $dfe <= 500 ) {
       $gene = $g2r;
@@ -57,13 +71,42 @@ while ( my $line = <INFILE> ) {
       }
       my $go = get_go($gene);
       print "$ref:$start\t$gene\t$insert_feature\t$insert_type\t$go\n";
+      if (defined $go and $go ne ''){
+        foreach my $go (split ';' , $go){
+        my ($acc,$aspect,$desc) = split ',' , $go ;
+        $enrichment{all}{all}{$acc}{desc}=$desc;
+        $enrichment{all}{all}{$acc}{count}++;
+        $enrichment{$insert_type}{$insert_feature}{$acc}{desc}=$desc;
+        $enrichment{$insert_type}{$insert_feature}{$acc}{count}++;
+        $enrichment{$insert_type}{all}{$acc}{desc}=$desc;
+        $enrichment{$insert_type}{all}{$acc}{count}++;
+        }
+      }
     }
   }
   elsif ( $insert_feature !~ /mRNA/ ) {
     my $go = get_go($gene);
     print "$ref:$start\t$gene\t$insert_feature\t$insert_type\t$go\n";
+    if (defined $go and $go ne ''){
+      foreach my $go (split ';' , $go){
+      my ($acc,$aspect,$desc) = split ',' , $go ;
+      $enrichment{all}{all}{$acc}{desc}=$desc;
+      $enrichment{all}{all}{$acc}{count}++;
+      $enrichment{$insert_type}{$insert_feature}{$acc}{desc}=$desc;
+      $enrichment{$insert_type}{$insert_feature}{$acc}{count}++;
+      $enrichment{$insert_type}{all}{$acc}{desc}=$desc;
+      $enrichment{$insert_type}{all}{$acc}{count}++;
+      }
+    }
   }
 
+}
+
+print "\nGO enrichment in insert types\n";
+foreach my $type (sort keys %enrichment){
+  foreach my $go (sort {$enrichment{$type}{all}{$b}{count} <=> $enrichment{$type}{all}{$a}{count}} keys %{$enrichment{$type}{all}}){
+      print "$go\t$type\t$enrichment{$type}{all}{$go}{desc}\t$enrichment{$type}{all}{$go}{count}\n"
+  }
 }
 
 sub get_go {
