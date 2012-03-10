@@ -70,7 +70,9 @@ while ( my $header = <INFASTQ_1> ) {
 	$header_to_store = $1;
     }elsif($header =~ /(\S+)(\/1|\/2)/){
 	$header_to_store = $1;
-    }else {
+    }elsif($header =~ /(\S+)/){
+       $header_to_store = $1;
+    }else{
 	$header_to_store = $header;
     }
     my $seq = <INFASTQ_1>;
@@ -99,6 +101,8 @@ while ( my $header = <INFASTQ_2> ) {
         $header_to_store = $1;
     }elsif($header =~ /(\S+)(\/1|\/2)/){
         $header_to_store = $1;
+    }elsif($header =~ /(\S+)/){
+       $header_to_store = $1;
     }else {
         $header_to_store = $header;
     }    

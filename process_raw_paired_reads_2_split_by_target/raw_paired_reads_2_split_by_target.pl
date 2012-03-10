@@ -141,6 +141,7 @@ foreach my $sample ( sort keys %files ) {
   print OUTFILE "#!/bin/bash\n\n";
   print OUTFILE "compute_node=`hostname`\n";
   print OUTFILE "echo \"$sample \$compute_node \" >> $log_file\n";
+  print OUTFILE "umask 002\n";
   my (
     @trim_filter, @clean,               @aln,
     @sam,         @split_sam_by_target, @sam2fq,
