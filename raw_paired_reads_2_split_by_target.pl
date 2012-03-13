@@ -102,7 +102,7 @@ my %files;
 my $dir_path = File::Spec->rel2abs($dir);
 ##split into smaller files
 if ($split) {
-  mkdir "$current_dir/split_by_number_fq", 0777
+  mkdir "$current_dir/split_by_number_fq", 002
     unless -d "$current_dir/split_by_number_fq";
   opendir( DIR, $dir_path ) || die "$!";
   foreach my $file ( readdir(DIR) ) {
@@ -245,17 +245,17 @@ foreach my $sample ( sort keys %files ) {
   print OUTFILE
     "echo \"$sample start make dir $current_dir/sam_for_all_reads\"\n";
   print OUTFILE
-"if [ ! -d \"$current_dir/sam_for_all_reads\" ] ; then mkdir $current_dir/sam_for_all_reads ; fi\n";
+"if [ ! -d \"$current_dir/sam_for_all_reads\" ] ; then mkdir -m 0775 $current_dir/sam_for_all_reads ; fi\n";
   print OUTFILE
     "echo \"$sample end make dir $current_dir/sam_for_all_reads\"\n";
   print OUTFILE
     "echo \"$sample start make dir $current_dir/bam_for_all_reads\"\n";
   print OUTFILE
-"if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir $current_dir/bam_for_all_reads ; fi\n";
+"if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir -m 0775 $current_dir/bam_for_all_reads ; fi\n";
   print OUTFILE
     "echo \"$sample end make dir $current_dir/bam_for_all_reads\"\n";
   print OUTFILE
-"if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir $current_dir/bam_for_all_reads ; fi\n";
+"if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir -m 0775 $current_dir/bam_for_all_reads ; fi\n";
   print OUTFILE
 "echo \"$sample start cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads \"\n";
   print OUTFILE "cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads\n";
@@ -286,20 +286,20 @@ foreach my $sample ( sort keys %files ) {
 "if [ -f \$tmp_dir/$sample.sorted.bam ] && [ ! -f $current_dir/bam_for_all_reads/$sample.sorted.bam ] ; then echo \" $sample.sorted.bam did not copy to $current_dir/bam_for_all_reads\" ; fi\n";
 
   if ($filter_trim) {
-    print OUTFILE "mkdir -p $current_dir/fq_split_by_number_filtered\n";
+    print OUTFILE "mkdir -m 0775 -p $current_dir/fq_split_by_number_filtered\n";
     print OUTFILE
 "cp \$tmp_dir/*.matched.fq \$tmp_dir/*unPaired.fq $current_dir/fq_split_by_number_filtered\n";
   }
   if ($bin_per_chrom) {
-    print OUTFILE "mkdir -p $current_dir/fq_split_by_chromosome\n";
-    print OUTFILE "mkdir -p $current_dir/sam_split_by_chromosome\n";
-    print OUTFILE "mkdir -p $current_dir/bam_split_by_chromosome\n";
+    print OUTFILE "mkdir -m 0775 -p $current_dir/fq_split_by_chromosome\n";
+    print OUTFILE "mkdir -m 0775 -p $current_dir/sam_split_by_chromosome\n";
+    print OUTFILE "mkdir -m 0775 -p $current_dir/bam_split_by_chromosome\n";
     print OUTFILE
-"for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/fq_split_by_chromosome/\$i ; done \n";
+"for i in `ls \$tmp_dir/split_by_target` ; do mkdir -m 0775 -p $current_dir/fq_split_by_chromosome/\$i ; done \n";
     print OUTFILE
-"for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/sam_split_by_chromosome/\$i ; done \n";
+"for i in `ls \$tmp_dir/split_by_target` ; do mkdir -m 0775 -p $current_dir/sam_split_by_chromosome/\$i ; done \n";
     print OUTFILE
-"for i in `ls \$tmp_dir/split_by_target` ; do mkdir -p $current_dir/bam_split_by_chromosome/\$i ; done\n";
+"for i in `ls \$tmp_dir/split_by_target` ; do mkdir -m 0775 -p $current_dir/bam_split_by_chromosome/\$i ; done\n";
     print OUTFILE
 "for i in `ls \$tmp_dir/split_by_target` ; do $scripts_dir/move_files.pl \$tmp_dir/split_by_target/\$i $current_dir; done\n";
   }

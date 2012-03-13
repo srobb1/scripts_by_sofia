@@ -271,7 +271,7 @@ foreach my $fq (@fq_files) {
         my $fq_name   = pop @fq_path;
         my $shell_dir = "$current_dir/$top_dir/shellscripts/step_2";
         `mkdir -p $shell_dir`;
-        my $outsh = ">$shell_dir/$fq_count" . "fq2fa.sh";
+        my $outsh = ">$shell_dir/$fq_count." . "fq2fa.sh";
         open OUTSH, ">$outsh";
         print OUTSH "$cmd\n";
       }
@@ -295,7 +295,7 @@ foreach my $fq (@fq_files) {
   $fq_count++;
 }
 if (!-e "$current_dir/$top_dir/shellscripts/step_2_not_needed_fq_already_converted_2_fa" and $qsub_array){
-  print QSUBARRAY "qsub -t 0-", $fq_count ," $current_dir/$top_dir/shellscripts/run.step_2.sh\n";
+  print QSUBARRAY "qsub -t 0-", $fq_count-1 ," $current_dir/$top_dir/shellscripts/run.step_2.sh\n";
   print QSUBARRAY2 "sh $current_dir/$top_dir/shellscripts/step_2/\$PBS_ARRAYID.fq2fa.sh";
 }elsif ($qsub_array){
   unlink "$current_dir/$top_dir/shellscripts/run.step_2.sh";
