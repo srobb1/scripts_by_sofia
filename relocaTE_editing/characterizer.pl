@@ -13,7 +13,7 @@ use Cwd;
 ## or
 ## mping_homozygous_heterozygous.pl A119.mping.te_insertion.all.txt ../bam_files/ > A119.inserts_characterized.txt
 ##
-##
+## 031412 added a check for XM and NM tags in sam line, if >0 then it is not 100% Match
 ## 022712 changed the logic for calling 'homo', 'het', 'new ins/somat' 
 
 my $sites_file   = shift;
@@ -95,7 +95,15 @@ while ( my $line = <INSITES> ) {
       ## must be a all M match no soft clipping
       #if ( $cigar =~ /^[1-3]?S?\d+M[1-3]?S?$/ ) { ##allow for a couple of soft clippings
       if ( $cigar =~ /^\d+M$/ ) {
-        $Mmatch++;
+        my ($NM) = $sam_line =~ /NM:i:(\d+)/; ## edit distance used
+        my ($XM) = $sam_line =~ /XM:i:(\d+)/; ## bwa specific: mismatch count, often the same as NM, have not seen a XM>0 and NM==0
+        if (defined $XM and $XM == 0){
+          $Mmatch++;
+        }elsif(defined $NM and $NM == 0){
+          $Mmatch++;
+        }elsif (!defined $NM and !defined $XM){
+          $Mmatch++;
+        }
       }
       #elsif ( $cigar !~ /S/ and $cigar =~ /[IND]/ ) {
       elsif ( $cigar =~ /[IND]/ ) {
@@ -156,6 +164,8 @@ while ( my $line = <INSITES> ) {
 #print "$chromosome.$pos\t$total_count\t$left_count\t$right_count\t$Mmatch\t$status\n";#\t$Smatch\t$cigar_all\n";
   }
 }
+##generate vcf of spanners looking for excision events
+__END__
 my @unlink_files;
 foreach my $pos ( keys %matches ) {
   my ( $target, $loc ) = split /\./, $pos;
