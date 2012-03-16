@@ -367,12 +367,14 @@ open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh" if $qsu
       `mkdir -p $shell_dir`;
       open OUTSH, ">$shell_dir/$i.$TE.blat.sh";
     }
+    #use pre-existing blatout files
     if ( !-e "$path/blat_output/$fa_name.te_$TE.blatout" ) {
       my $cmd =
 "blat -minScore=10 -tileSize=7 $te_path $fa $path/blat_output/$fa_name.te_$TE.blatout";
       print OUTSH "$cmd\n" if $parallel;
       `$cmd` if !$parallel;
     }
+    #use pre-esixting te_containing_fq files
     my $te_Containing_fq =
       "$path/te_containing_fq/$fa_name.te_$TE.ContainingReads.fq";
     if ( -e $te_Containing_fq ) {

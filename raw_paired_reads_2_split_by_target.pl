@@ -79,8 +79,9 @@ my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
 my $date = "$year-$abbr[$mon]-$mday";    ## gives 2012-Dec-17
 
 unless ( -e $genomeFasta ) {
+  print "$genomeFasta does not exist. Check file name.\n";
   &getHelp();
-  die "$genomeFasta does not exist. Check file name.\n";
+  #die "$genomeFasta does not exist. Check file name.\n";
 }
 
 my $genome_path = File::Spec->rel2abs($genomeFasta);
@@ -97,9 +98,22 @@ unless ( -e "$genome_path.rsa" ) {
   print GINDEX "chmod ago+rwx $genome_path*\n";
   close GINDEX;
 }
+my $dir_path = File::Spec->rel2abs($dir);
+##check to make sure that files can be found with the mate patterns provided
+my $mate_1_path = "$dir_path/*$mate_1_id.f*q";
+my $mate_2_path = "$dir_path/*$mate_2_id.f*q";
+my @filelist_1 = < $mate_1_path >;
+my @filelist_2 = < $mate_2_path >;
+if (!@filelist_1){
+  print "Cannot find any files in $dir_path that are similar to your mate_file_1 pattern $mate_1_id\n";
+  &getHelp();
+}
+if (!@filelist_2){
+  print "Cannot find any files in $dir_path that are similar to your mate_file_1 pattern $mate_2_id\n";
+  &getHelp();
+}
 
 my %files;
-my $dir_path = File::Spec->rel2abs($dir);
 ##split into smaller files
 if ($split) {
   mkdir "$current_dir/split_by_number_fq", 002
