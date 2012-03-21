@@ -14,7 +14,7 @@ my $CP1 = "$dir_path/*$lowest_dir*.fq  $final_dir/fq_split_by_chromosome/$lowest
 my $CP2 = "$dir_path/*$lowest_dir*.sam  $final_dir/sam_split_by_chromosome/$lowest_dir/.";
 my $CP3 = "$dir_path/*$lowest_dir*.sorted.bam*  $final_dir/bam_split_by_chromosome/$lowest_dir/.";
 
-`cp $CP1`; 
-`cp $CP2`;
-`cp $CP3`;
+`mv $CP1`; 
+`mv $CP2`;
+`mv $CP3`;
 
