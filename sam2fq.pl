@@ -1,8 +1,17 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Spec;
-#for i in `seq 1 12` ; do sam2fq.pl Chr$i ; done
-#for i in `seq 1 12` ; do echo "sam2fq.pl Chr$i" > Chr$i.sam2fq.temp ; done
+
+## example usage:
+## for i in `seq 1 12` ; do sam2fq.pl Chr$i ; done
+## for i in `seq 1 12` ; do echo "sam2fq.pl Chr$i" > Chr$i.sam2fq.temp ; done
+
+## updated on 03/21/2012: realized that if any alignments were unmapped, or unpaired in the sam file
+## that was not named unpaired, the sequences were not printed anywhere, they were lost. made a change
+## to allow the printing of any unpaired or unmapped seqs to the unpaired.fq file. if the unpaired
+## file already exists, it will be appended to. Also changed the output files form _1.fq and _2.fq
+## to _p1.fq and _p2.fq
+
 
 my $dir = shift;
 my $dir_path = File::Spec->rel2abs($dir);
@@ -18,12 +27,18 @@ foreach my $file ( readdir(DIR) ) {
     next unless $file =~ /^(\S+)\.sam$/;
     my $filebase = $1;
     open INSAM, "$dir_path/$file" or die "Can't open $file to convert 2 fq $!";
-    if ( $filebase =~ /unPaired/ ) {
-        open OUTUNPAIRED, ">$dir_path/$filebase.fq";
+    my $unpaired = "$dir_path/$filebase" . "_unPaired.fq";
+    if ($filebase =~ /unPaired/){
+      $unpaired = "$dir_path/$filebase.fq";
     }
-    else {
-        open OUTFQ_1, ">$dir_path/$filebase" . "_1.fq";
-        open OUTFQ_2, ">$dir_path/$filebase" . "_2.fq";
+    if (!-s $unpaired){
+      open OUTUNPAIRED, ">$unpaired";
+    }else{
+      open OUTUNPAIRED, ">>$unpaired";
+    }
+    if ($filebase !~ /unPaired/){
+      open OUTFQ_1, ">$dir_path/$filebase" . "_p1.fq";
+      open OUTFQ_2, ">$dir_path/$filebase" . "_p2.fq";
     }
     while ( my $line = <INSAM> ) {
         next if $line =~ /^@/;
@@ -72,10 +87,13 @@ foreach my $file ( readdir(DIR) ) {
             print OUTUNPAIRED $toPrint;
         }
         else {
-            warn
-"it is unclear if this is a first or second pair based on flag so it will be categorized as unpaired: $name flag:$flag\n";
+#            warn
+#"it is unclear if this is a first or second pair based on flag so it will be categorized as unpaired: $name flag:$flag\n";
 	    print OUTUNPAIRED $toPrint;
         }
     }
+  if (-z $unpaired ){
+    unlink $unpaired;
+  }
 }
 

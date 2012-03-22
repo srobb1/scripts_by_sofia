@@ -90,7 +90,8 @@ foreach my $in_sam (@sam_files) {
 
     while ( my $line = <INSAM> ) {
         chomp $line;
-        if ( $line =~ /^\@SQ\s+SN:(\S+)/ ) {
+        next if  $line =~ /^\@HD\s+VN:/ ;
+        if ( $line =~ /^\@SQ\s+SN:(\S+)/) {
             $headers{$1} = $line;
         }
         elsif ( $line =~ /^\@PG/ ) {

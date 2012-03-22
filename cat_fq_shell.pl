@@ -5,6 +5,10 @@ use File::Spec;
 #provide the direcotry name
 ## for multiple directories try this:
 ## for i in `ls` ; do cat_fq_shell.pl $i prefix; done
+
+## updated 03/31/2012: changed the output files from _1.fq to _p1.fq and _2.fq to _p2.fq
+
+
 if (!defined @ARGV){
   die "run command like this: for i in `ls` ; do cat_fq_shell.pl \$i prefix [/tmp_dir default:/sractch] [clean 1|0 default:1]; done\n";
 }
@@ -33,12 +37,12 @@ print SH "tmp_dir=`mktemp --tmpdir=$tempDir -d`\n";
 print SH "echo \"tmp_dir=\$tmp_dir\"\n";
 print SH "cd \$tmp_dir\n";
 
-my $mate_1 = "$lowest_dir"."_1.fq" ; 
-my $mate_2 = "$lowest_dir"."_2.fq" ; 
+my $mate_1 = "$lowest_dir"."_p1.fq" ; 
+my $mate_2 = "$lowest_dir"."_p2.fq" ; 
 my $unpaired = "$lowest_dir"."_unPaired.fq"; 
 
-print SH "cat $dir_path/*_1.fq > \$tmp_dir/$mate_1\n"; 
-print SH "cat $dir_path/*_2.fq > \$tmp_dir/$mate_2\n"; 
+print SH "cat $dir_path/*_p1.fq > \$tmp_dir/$mate_1\n"; 
+print SH "cat $dir_path/*_p2.fq > \$tmp_dir/$mate_2\n"; 
 print SH "if [ -s $dir_path/$unpaired ] ; then cat $dir_path/*unPaired.fq >  \$tmp_dir/$unpaired.tmp ; fi\n";
 #print SH "cat $dir_path/*unPaired.fq >  \$tmp_dir/$unpaired.tmp\n";
 
