@@ -49,8 +49,8 @@ print SH "if [ -s $dir_path/$unpaired ] ; then cat $dir_path/*unPaired.fq >  \$t
 if ($clean){
   print SH "clean_pairs.pl -1 \$tmp_dir/$mate_1 -2 \$tmp_dir/$mate_2 > \$tmp_dir/$unpaired.tmp2\n";
   print SH "if [ -e \$tmp_dir/$unpaired.tmp ] ; then cat \$tmp_dir/$unpaired.tmp \$tmp_dir/$unpaired.tmp2 > \$tmp_dir/$unpaired ; else mv \$tmp_dir/$unpaired.tmp2 \$tmp_dir/$unpaired ; fi\n";
-  $mate_1 = "$lowest_dir"."_1.matched.fq"; 
-  $mate_2 = "$lowest_dir"."_2.matched.fq"; 
+  $mate_1 = "$lowest_dir"."_p1.matched.fq"; 
+  $mate_2 = "$lowest_dir"."_p2.matched.fq"; 
 }
 print SH "cp \$tmp_dir/$mate_1 $one_up/$prefix$mate_1\n";
 print SH "cp \$tmp_dir/$mate_2 $one_up/$prefix$mate_2\n";
