@@ -39,7 +39,7 @@ print SH "cd \$tmp_dir\n";
 
 my $mate_1 = "$lowest_dir"."_p1.fq" ; 
 my $mate_2 = "$lowest_dir"."_p2.fq" ; 
-my $unpaired = "$lowest_dir"."_unPaired.fq"; 
+my $unpaired = "$lowest_dir".".unPaired.fq"; 
 
 print SH "cat $dir_path/*_p1.fq > \$tmp_dir/$mate_1\n"; 
 print SH "cat $dir_path/*_p2.fq > \$tmp_dir/$mate_2\n"; 
