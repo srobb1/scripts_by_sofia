@@ -2,7 +2,6 @@
 use strict;
 use Data::Dumper;
 use File::Spec;
-
 my $all_records_dir = shift;
 my $genome_file     = shift;
 my $te_fasta        = shift;
@@ -14,7 +13,7 @@ my %seqs;
 ##get the regelar expression patterns for mates and for the TE
 ##when passed on the command line as an argument, even in single
 ##quotes I lose special regex characters
-open INREGEX, "$regex_file" or die "$!";
+open INREGEX, "$regex_file" or die "Can't read regex file$!";
 my $mate_1_pattern;
 my $mate_2_pattern;
 
@@ -51,13 +50,14 @@ foreach my $blat_file (@blat_files) {
   my $te      = $1;
   my $te_mate = $FA;
   $te_mate =~ s/\.fa//;
-  my $prefix = $te_mate.'.fq';
-  if ( $prefix =~ /$mate_1_pattern/ ) {
-      $prefix =~ s/$mate_1_pattern//;
-  }elsif ($prefix =~ /$mate_2_pattern/) {
-    $prefix =~ s/$mate_2_pattern//;
-  }
-  my @dbs = `ls $all_records_dir/$prefix*fa`;
+  #my $prefix = $te_mate.'.fq';
+  #if ( $prefix =~ /$mate_1_pattern/ ) {
+  #    $prefix =~ s/$mate_1_pattern//;
+  #}elsif ($prefix =~ /$mate_2_pattern/) {
+  #  $prefix =~ s/$mate_2_pattern//;
+  #}
+  #my @dbs = `ls $all_records_dir/$prefix*fa`;
+  my @dbs = `ls $all_records_dir/*fa`;
   chomp @dbs;
   ##blat parser
   open INBLAT, $blat_file, or die "Please provide a blat output file\n";
@@ -132,8 +132,20 @@ foreach my $te (keys %seq_storage){
     my $mate = $file_name;
     $mate =~ s/\.fa//;
     my $fastacmd_str = join ',' , sort keys %{$seq_storage{$te}{$mate_fa}};
-    my $seq_recs =
-      `fastacmd -d $mate_fa -s $fastacmd_str`;
+    my @to_get = sort keys %{$seq_storage{$te}{$mate_fa}};
+    my $seq_recs = '';
+    if ( @to_get > 500 ) {
+        for ( my $i = 0 ; $i < @to_get ; $i = $i + 500 ) {
+          $fastacmd_str = join ",", ( splice( @to_get, 0, 500 ) );
+          $seq_recs .= `fastacmd -d $mate_fa -s $fastacmd_str`; 
+      }
+     }
+     else {
+       $seq_recs .= `fastacmd -d $mate_fa -s $fastacmd_str`; 
+     }
+
+    #my $seq_recs =
+    #  `fastacmd -d $mate_fa -s $fastacmd_str`;
     if ( defined $seq_recs ) {
       my @seq_recs = split />/, $seq_recs;
       ## get rid of first empty record
@@ -313,7 +325,7 @@ foreach my $te ( keys %seqs ) {
   }
 }
 my %inserts;
-if ($insert_pos_file){
+if (-e $insert_pos_file){
 open INSERTS, "$insert_pos_file";
 while (my $line = <INSERTS>){
   next if $line =~ /^TE.+Exper.+chromosome.+insertion_site.+left_flanking_read_count/;

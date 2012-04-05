@@ -32,6 +32,22 @@ GetOptions(
   '2|mate_2_id:s'   => \$mate_file_2,
   'h|help'          => \&getHelp,
 );
+
+=cut
+print "
+-p $parallel
+-i $insert_file
+-w $workingdir
+-o $outdir
+-d $fq_dir
+-t $te_fasta
+-g $genomeFasta
+-1 $mate_file_1
+-2 $mate_file_2
+
+";
+=cut
+
 my $current_dir;
 
 if ( defined $workingdir and -d $workingdir ) {
@@ -92,7 +108,7 @@ options:
 -2 STR          regular expression to identify mate 2 paired files [_2\D*?fq]
 
 **recommended:
--f STR		directory of TE subdirectory of relocaTE output ex: /home/usr/relocaTE_output/myTE/ [no default]
+## maybe, i removed this: -f STR		directory of TE subdirectory of relocaTE output ex: /home/usr/relocaTE_output/myTE/ [no default]
 
 **optional:
 -i STR          name of the file that contains insert positions,relocaTE:all.$te.te_insertion_sites.table.txt (TE<tab>.<tab>ref<tab>pos)
@@ -139,6 +155,7 @@ if ($parallel){
   $shell_dir = "$current_dir/$top_dir/shellscripts/step_$shell_script_count";
   `mkdir -p $shell_dir`;
 }
+my $file_count = 0;
 foreach my $fq (@fq_files) {
   my $cmd;
   my $fq_path = File::Spec->rel2abs($fq);
@@ -150,7 +167,7 @@ foreach my $fq (@fq_files) {
     if ( !-e $fa ) {
         $cmd = "$scripts/relocaTE_fq2fa.pl $fq_path $fa";
         if ($parallel){
-          my $outsh = ">$shell_dir/$fq_name" . "2fa.sh";
+          my $outsh = "$shell_dir/$file_count" . "fq2fa.sh";
           open OUTSH, ">$outsh";
           print OUTSH "$cmd\n";
           close OUTSH;
@@ -161,8 +178,8 @@ foreach my $fq (@fq_files) {
      if (!-e "$fa.nin"){
         $cmd = "formatdb -i $fa -p F -o T";
        if ($parallel){
-         my $outsh = ">$shell_dir/$fa" . ".formatdb.sh";
-         open OUTSH, ">$outsh";
+         my $outsh = "$shell_dir/$file_count" . ".fa4formatdb.sh";
+         open OUTSH, ">$outsh" or die "Can't open $outsh for writting $!\n";
          print OUTSH "$cmd\n";
          close OUTSH;
        }else {
@@ -175,6 +192,7 @@ foreach my $fq (@fq_files) {
 "$fq does not seem to be a fastq based on the file extension. It should be fq or fastq\n";
     &getHelp();
   }
+  $file_count++;
 }
 ##split TE fasta into single record fastas
 my @te_fastas;
@@ -212,6 +230,7 @@ close(OUTFASTA);
 
 #foreach TE fasta blat against target chromosome and parse and find insertion sites
 $shell_script_count++ if $parallel;
+$file_count = 0;
 foreach my $te_path (@te_fastas) {
   my @path     = split '/', $te_path;
   my $te_fasta = pop @path;
@@ -229,7 +248,7 @@ foreach my $te_path (@te_fastas) {
     if ($parallel) {
       my $shell_dir = "$current_dir/$top_dir/shellscripts/step_$shell_script_count/$TE";
       `mkdir -p $shell_dir`;
-      open OUTSH, ">$shell_dir/$TE.$fa_name.blat.sh";
+      open OUTSH, ">$shell_dir/$file_count.blat.sh";
     }
     if ( !-e "$path/blat_output/$fa_name.te_$TE.blatout" ) {
       my $cmd =
@@ -238,6 +257,7 @@ foreach my $te_path (@te_fastas) {
       `$cmd` if !$parallel;
     }
   }
+$file_count++;
 }
 $shell_script_count++ if $parallel;
 foreach my $te_path (@te_fastas) {
