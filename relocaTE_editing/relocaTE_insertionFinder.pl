@@ -141,7 +141,7 @@ open OUTLIST,  ">$results_dir/$usr_target.$TE.te_insertion_sites.reads.list" or 
 open OUTALLTABLE, ">>$results_dir/all.$TE.te_insertion_sites.table.txt"  or die $!;
 print OUTGFF "##gff-version	3\n";
 ##output in tab delimited table
-my $tableHeader = "TE\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\n";
+my $tableHeader = "TE\tTSD\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\n";
 print OUTTABLE $tableHeader;
 print OUTALLTABLE $tableHeader if -s "$results_dir/all.$TE.te_insertion_sites.table.txt" < 100;
 

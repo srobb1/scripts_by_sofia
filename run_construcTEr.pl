@@ -3,7 +3,7 @@ use File::Spec;
 use Getopt::Long;
 use Cwd;
 use strict;
-
+use Data::Dumper;
 ##change $scripts to location of relocaTE scripts
 my $scripts = '~/bin/relocaTE_editing';
 
@@ -19,6 +19,7 @@ my $outdir   = 'construcTEr';
 my $parallel = 1;
 my $mate_file_1        = '_1\D*?fq';
 my $mate_file_2        = '_2\D*?fq';
+#my $unpaired        = 'unPaired\D*?fq';
 my $insert_file = 0;
 GetOptions(
   'p|parallel:i'    => \$parallel,
@@ -30,6 +31,7 @@ GetOptions(
   't|te_fasta:s'    => \$te_fasta,
   '1|mate_1_id:s'   => \$mate_file_1,
   '2|mate_2_id:s'   => \$mate_file_2,
+#  'u|unpaired_id:s'   => \$unpaired,
   'h|help'          => \&getHelp,
 );
 
@@ -104,8 +106,8 @@ options:
 -g STR          genome fasta file path. If not provided will only align reads to TE and remove TE seq from short reads. [no default]
 -t STR          fasta containing nucleotide sequences of transposable elements with TSD=xxx in the desc. [no default]
 -d STR          directory of paired and unpaired fastq files (.fq or .fastq is acceptable)  [no default]
--1 STR          regular expression to identify mate 1 paired files [_1\D*?fq]
--2 STR          regular expression to identify mate 2 paired files [_2\D*?fq]
+-1 STR          regular expression to identify mate 1 paired files [\'_1\D*?fq\']
+-2 STR          regular expression to identify mate 2 paired files [\'_2\D*?fq\']
 
 **recommended:
 ## maybe, i removed this: -f STR		directory of TE subdirectory of relocaTE output ex: /home/usr/relocaTE_output/myTE/ [no default]
@@ -139,7 +141,6 @@ my $top_dir = $outdir;
 $fq_dir = File::Spec->rel2abs($fq_dir);
 my @fq_files = <$fq_dir/*fq>;
 push @fq_files , <$fq_dir/*fastq>;
-
 ## create bowtie index
 my $genome_file = File::Spec->rel2abs($genomeFasta);
 if ( !-e "$genome_file.bowtie_build_index.1.ebwt" ) {
@@ -157,6 +158,7 @@ if ($parallel){
 }
 my $file_count = 0;
 foreach my $fq (@fq_files) {
+  next if $fq =~ /unparied/i;
   my $cmd;
   my $fq_path = File::Spec->rel2abs($fq);
   my $fa = $fq;
@@ -230,7 +232,6 @@ close(OUTFASTA);
 
 #foreach TE fasta blat against target chromosome and parse and find insertion sites
 $shell_script_count++ if $parallel;
-$file_count = 0;
 foreach my $te_path (@te_fastas) {
   my @path     = split '/', $te_path;
   my $te_fasta = pop @path;
@@ -240,6 +241,7 @@ foreach my $te_path (@te_fastas) {
   `mkdir -p $path/blat_output`;
 
   #blat fa files against te.fa
+  my $file_count = 0;
   foreach my $fa ( @fa ) {
     #remove and save filename part of path
     my @fa_path = split '/', $fa;
@@ -256,8 +258,8 @@ foreach my $te_path (@te_fastas) {
       print OUTSH "$cmd\n" if $parallel;
       `$cmd` if !$parallel;
     }
+    $file_count++;
   }
-$file_count++;
 }
 $shell_script_count++ if $parallel;
 foreach my $te_path (@te_fastas) {

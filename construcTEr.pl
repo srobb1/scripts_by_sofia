@@ -16,7 +16,6 @@ my %seqs;
 open INREGEX, "$regex_file" or die "Can't read regex file$!";
 my $mate_1_pattern;
 my $mate_2_pattern;
-
 while ( my $line = <INREGEX> ) {
   chomp $line;
   ( $mate_1_pattern, $mate_2_pattern ) = split /\t/, $line;
@@ -43,6 +42,7 @@ while ( my $line = <TE_FA> ) {
 my %seq_storage;
 my @blat_files = <$working_dir/blat_output/*blatout>;
 foreach my $blat_file (@blat_files) {
+  next if $blat_file =~ /unpaired/i;
   my @file_path = split '/', $blat_file;
   my $file_name = pop @file_path;
   my $FA        = $file_name;
@@ -50,14 +50,14 @@ foreach my $blat_file (@blat_files) {
   my $te      = $1;
   my $te_mate = $FA;
   $te_mate =~ s/\.fa//;
-  #my $prefix = $te_mate.'.fq';
-  #if ( $prefix =~ /$mate_1_pattern/ ) {
-  #    $prefix =~ s/$mate_1_pattern//;
-  #}elsif ($prefix =~ /$mate_2_pattern/) {
-  #  $prefix =~ s/$mate_2_pattern//;
-  #}
-  #my @dbs = `ls $all_records_dir/$prefix*fa`;
-  my @dbs = `ls $all_records_dir/*fa`;
+  my $prefix = $te_mate.'.fq';
+  if ( $prefix =~ /$mate_1_pattern/ ) {
+      $prefix =~ s/$mate_1_pattern//;
+  }elsif ($prefix =~ /$mate_2_pattern/) {
+    $prefix =~ s/$mate_2_pattern//;
+  }
+  my @dbs = `ls $all_records_dir/$prefix*fa`;
+  ## @db should only be p1 and p2 == 2 files
   chomp @dbs;
   ##blat parser
   open INBLAT, $blat_file, or die "Please provide a blat output file\n";
@@ -117,6 +117,7 @@ foreach my $blat_file (@blat_files) {
       $seqs{$te}{$id}{$te_mate}{$te}                   = 1;
 
       foreach my $db (@dbs){
+        next if $db =~ /unpaired/i;
         $seq_storage{$te}{$db}{$id} = 1;
       }
     }
@@ -137,7 +138,7 @@ foreach my $te (keys %seq_storage){
     if ( @to_get > 500 ) {
         for ( my $i = 0 ; $i < @to_get ; $i = $i + 500 ) {
           $fastacmd_str = join ",", ( splice( @to_get, 0, 500 ) );
-          $seq_recs .= `fastacmd -d $mate_fa -s $fastacmd_str`; 
+          $seq_recs .= `fastacmd -d $mate_fa -s $fastacmd_str`;
       }
      }
      else {
@@ -329,11 +330,12 @@ if (-e $insert_pos_file){
 open INSERTS, "$insert_pos_file";
 while (my $line = <INSERTS>){
   next if $line =~ /^TE.+Exper.+chromosome.+insertion_site.+left_flanking_read_count/;
-  my ($TE, $sample_desc, $target, $pos) = split /\t/, $line;
+  my ($TE, $TSD, $sample_desc, $target, $pos) = split /\t/, $line;
   $inserts{$target}{"$target:$pos"}{pos}=$pos;
   }
 }
 #print Dumper \%inserts;
+open OUTFA , ">$working_dir/$TE.construcTEr.reads.fa";
 foreach my $target ( sort keys %construcTEr ) {
   foreach my $range (
     sort { ( split /\.\./, $a )[0] <=> ( split /\.\./, $b )[0] }
@@ -375,7 +377,7 @@ foreach my $target ( sort keys %construcTEr ) {
         }
       }
       }
-      print
+      print OUTFA
 ">$id $name:$start..$end ($strand) mismatches=$mismatch $range_str\n$seq\n";
     }
   }

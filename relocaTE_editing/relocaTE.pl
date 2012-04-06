@@ -141,9 +141,9 @@ options:
 -w STR          base working directory, needs to exist, will not create, full path [cwd] 
 -l INT          len cutoff for the TE trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (ex 0.1) [0] 
--1 STR		regular expression to identify mate 1 paired files ex: file_1.fq or file_1.noNumbers.fq [_1\D*?fq]
--2 STR          regular expression to identify mate 2 paired files ex: file_2.fq or file_2.noNumbers.fq [_2\D*?fq]
--u STR          regular expression to identify unpaired files [.unPaired\D*?fq] 
+-1 STR		regular expression to identify mate 1 paired files ex: file_1.fq or file_1.noNumbers.fq [\'_1\D*?fq\']
+-2 STR          regular expression to identify mate 2 paired files ex: file_2.fq or file_2.noNumbers.fq [\'_2\D*?fq\']
+-u STR          regular expression to identify unpaired files [\'.unPaired\D*?fq\'] 
 -h              this message
 
 SAMPLE TE FASTA
