@@ -130,16 +130,38 @@ foreach my $feature (@features_type) {
  	 print "werid: $downstream\n";      
          $gene2left = 0;
        }
-     } 
+    } 
+    if ( ($type eq 'exon' or $type eq 'intron' ) and (exists $each{$ref}{$start}{intergenic}) ){
+        delete $each{$ref}{$start}{intergenic} if exists $each{$ref}{$start}{intergenic} ;
+    }
+    if ( ($type eq 'transposon_exon' or $type eq 'transposon_intron' ) and (exists $each{$ref}{$start}{intergenic}) ){
+        delete $each{$ref}{$start}{intergenic} if exists $each{$ref}{$start}{intergenic} ;
+    }
+    if ( ($type eq 'intergenic') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{transposon_exon} or exists $each{$ref}{$start}{intron} or exists $each{$ref}{$start}{transposon_intron}  or exists $each{$ref}{$start}{three_prime_UTR} or exists $each{$ref}{$start}{five_prime_UTR} or exists $each{$ref}{$start}{transposon_three_prime_UTR} or exists $each{$ref}{$start}{transposon_five_prime_UTR}  ) ){
+       ##do nothing, move on
+       next;
+    } 
+    if ( ($type eq 'exon' or $type eq 'transposon_exon') and (exists $each{$ref}{$start}{intron} or exists $each{$ref}{$start}{transposon_intron}) ){
+       delete $each{$ref}{$start}{intron} if exists $each{$ref}{$start}{intron} ;
+       delete $each{$ref}{$start}{transposon_intron} if exists $each{$ref}{$start}{transposon_intron};
+     }
+     if ( ($type eq 'intron' or $type eq 'transposon_intron') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{transposon_exon}) ){
+       next;
+       ##dont add the intron record
+     }
      if ( ($type eq 'three_prime_UTR' or $type eq 'five_prime_UTR') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{intron}) ){
         delete $each{$ref}{$start}{exon} if exists $each{$ref}{$start}{exon} ;
         delete $each{$ref}{$start}{intron} if exists $each{$ref}{$start}{intron} ;
-      }elsif ( ($type eq 'transposon_three_prime_UTR' or $type eq 'transposon_five_prime_UTR') and (exists $each{$ref}{$start}{transposon_exon} or exists $each{$ref}{$start}{transposon_intron})){
+      }
+     if ( ($type eq 'transposon_three_prime_UTR' or $type eq 'transposon_five_prime_UTR') and (exists $each{$ref}{$start}{transposon_exon} or exists $each{$ref}{$start}{transposon_intron})){
         delete $each{$ref}{$start}{transposon_exon} if exists $each{$ref}{$start}{transposon_exon};
         delete $each{$ref}{$start}{transposon_intron} if exists $each{$ref}{$start}{transposon_intron};
-      }elsif ( ($type eq 'exon' or $type eq 'intron') and (exists $each{$ref}{$start}{three_prime_UTR} or exists $each{$ref}{$start}{five_prime_UTR}) ){
-	next;
-      }elsif ( ($type eq 'transposon_exon' or $type eq 'transposon_intron')  and (exists $each{$ref}{$start}{transposon_three_prime_UTR} or exists $each{$ref}{$start}{transposon_five_prime_UTR}) ){
+      }
+      if ( ($type eq 'exon' or $type eq 'intron') and (exists $each{$ref}{$start}{three_prime_UTR} or exists $each{$ref}{$start}{five_prime_UTR}) ){
+        ##dont add exon or intron record, just move on to the next record
+	next; 
+      }
+     if ( ($type eq 'transposon_exon' or $type eq 'transposon_intron')  and (exists $each{$ref}{$start}{transposon_three_prime_UTR} or exists $each{$ref}{$start}{transposon_five_prime_UTR}) ){
 	next;
       }
       $lengths{$type}{gt_5000}{$f_len}++ if $f_len > 5000;
@@ -239,7 +261,7 @@ foreach my $type (sort keys %inserts){
 }
 
 print "is there a preference for the distance from the start of the feature in which mping is inserted?\n";
-my $toPrint = "souce\tref\tinsert_type\tinsert_feature\tf_len\tdfs\tdfe\trel_pos\tf_strand\n";	
+my $toPrint = "souce\tref\tlocation\tinsert_type\tinsert_feature\tf_len\tdfs\tdfe\trel_pos\tf_strand\n";	
 my %intergenic;
 foreach my $ref (sort keys %each){
   foreach my $start (sort keys %{$each{$ref}}){
@@ -273,7 +295,7 @@ foreach my $ref (sort keys %each){
 	}
 	$f_strand = $orientation;
       }
-      $toPrint .= "$source\t$ref\t$insert_type\t$insert_feature\t$f_len\t$dfs\t$dfe\t$rel_pos\t$f_strand\n";	
+      $toPrint .= "$source\t$ref\t$start\t$insert_type\t$insert_feature\t$f_len\t$dfs\t$dfe\t$rel_pos\t$f_strand\n";	
       ##also i need to look at insertions that are not in the 5kb regions before or after a gene     
 
       ##look at distance from 5' end in tandem intergenic regions, therefor only 1 5'end

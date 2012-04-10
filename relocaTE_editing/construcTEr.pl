@@ -81,11 +81,20 @@ foreach my $blat_file (@blat_files) {
     my $tEnd        = $line[16];
     my $id          = $qName;
     my $aln_bp      = $matches + $qBaseInsert + $mismatches;
-    #### if the hit overlaps the edge of the TE and not most of the read is aligning
+    
+   ## throw out if gap is too big 
+   if ($qBaseInsert > 5 or $tBaseInsert > 5){
+      next;
+    }
+    
+    #### if the hit does not overlap the edge of the TE and not most of the read is not aligning
     #### throw it out
-    ##next
-    ##  if (( $tStart == 1 or $tEnd == $tLen )
-    ##  and ($aln_bp) <= ( $qLen * .98 ) );
+    next if  (( $tStart > 1 and $tEnd < $tLen ) and ($aln_bp < ( $qLen * .98 ) )); 
+
+    #### if the hit does overlap the edge of the TE and the query match count doesnot just about equal the target match length 
+    ### throw if out
+    next if ( (( $tStart == 1 or $tEnd == $tLen ) and ( ($aln_bp) < ( $tEnd - $tStart + 1 + $tBaseInsert - 5)) or ($aln_bp) > ( $tEnd - $tStart + 1 + $tBaseInsert + 5)) ); 
+
     my $add = 0;
     if ( exists $seqs{$te}{$id}{$te_mate}{blat_hit}{matches} ) {
       my $stored_matches = $seqs{$te}{$id}{$te_mate}{blat_hit}{matches};
