@@ -12,8 +12,8 @@ my $genomeFasta;
 my ( $minLength, $minQuality, $minPercent ) = ( 50, 20, 80 );
 my $Q             = 33;
 my $insertLength  = 500;
-my $mate_1_id     = "_1";
-my $mate_2_id     = "_2";
+my $mate_1_id     = "_p1";
+my $mate_2_id     = "_p2";
 my $split         = 0;
 my $filter_trim   = 1;
 my $tempDir       = "/scratch";
@@ -58,8 +58,8 @@ options:
 -p INT		min percent for fastq_quality_filter [80]
 -s INT		quality score offset type Sanger(33) or Illumina(64) [33]
 -i INT		insert library length [500]
--1 STR		file containing mate 1 id (ex reads_1.fq) [_1]
--2 STR		file containing mate 2 id (ex reads_2.fq) [_2]
+-1 STR		file containing mate 1 id (ex reads_1.fq) [_p1]
+-2 STR		file containing mate 2 id (ex reads_2.fq) [_p2]
 -b INT	        split the sam and bam files and organize by chromosome yes=1 no=0 [1]	
 -x INT	        split fq file into smaller files (1,000,000/file) yes=1 no=0 [0]	
 -f INT	        run fastq_quality_filter and fastq_quality_trimmer yes=1 no=0 [1]	
@@ -116,8 +116,7 @@ if (!@filelist_2){
 my %files;
 ##split into smaller files
 if ($split) {
-  mkdir "$current_dir/split_by_number_fq", 002
-    unless -d "$current_dir/split_by_number_fq";
+  mkdir "$current_dir/split_by_number_fq" unless -d "$current_dir/split_by_number_fq";
   opendir( DIR, $dir_path ) || die "$!";
   foreach my $file ( readdir(DIR) ) {
     my ( $volume, $directories, $filename ) = File::Spec->splitpath($file);
