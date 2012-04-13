@@ -119,7 +119,7 @@ foreach my $feature (@features_type) {
        }elsif ($upstream eq '-'){
          $gene2right = -1;
        }else{
- 	 print "weird: $upstream\n";      
+ 	 #print "weird: $upstream\n";      
          $gene2right = 0;
        }
        if ($downstream eq '+' ){
@@ -127,7 +127,7 @@ foreach my $feature (@features_type) {
        }elsif ($downstream eq '-'){
          $gene2left = -1;
        }else {
- 	 print "werid: $downstream\n";      
+ 	 #print "werid: $downstream\n";      
          $gene2left = 0;
        }
     } 
@@ -149,13 +149,15 @@ foreach my $feature (@features_type) {
        next;
        ##dont add the intron record
      }
-     if ( ($type eq 'three_prime_UTR' or $type eq 'five_prime_UTR') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{intron}) ){
+     if ( ($type eq 'three_prime_UTR' or $type eq 'five_prime_UTR') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{intron}  or exists $each{$ref}{$start}{intergenic})) {
         delete $each{$ref}{$start}{exon} if exists $each{$ref}{$start}{exon} ;
         delete $each{$ref}{$start}{intron} if exists $each{$ref}{$start}{intron} ;
+        delete $each{$ref}{$start}{intergenic} if exists $each{$ref}{$start}{intergenic} ;
       }
-     if ( ($type eq 'transposon_three_prime_UTR' or $type eq 'transposon_five_prime_UTR') and (exists $each{$ref}{$start}{transposon_exon} or exists $each{$ref}{$start}{transposon_intron})){
+     if ( ($type eq 'transposon_three_prime_UTR' or $type eq 'transposon_five_prime_UTR') and (exists $each{$ref}{$start}{transposon_exon} or exists $each{$ref}{$start}{transposon_intron}  or exists $each{$ref}{$start}{intergenic} )){
         delete $each{$ref}{$start}{transposon_exon} if exists $each{$ref}{$start}{transposon_exon};
         delete $each{$ref}{$start}{transposon_intron} if exists $each{$ref}{$start}{transposon_intron};
+        delete $each{$ref}{$start}{intergenic} if exists $each{$ref}{$start}{intergenic} ;
       }
       if ( ($type eq 'exon' or $type eq 'intron') and (exists $each{$ref}{$start}{three_prime_UTR} or exists $each{$ref}{$start}{five_prime_UTR}) ){
         ##dont add exon or intron record, just move on to the next record
@@ -192,23 +194,48 @@ foreach my $ref (keys %each){
       my $g2l = $each{$ref}{$start}{$insert_feature}{gene2left};
       my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
       if ($insert_feature =~ /intergenic/){
-        if ($dfe <= 500 and $g2r == 1 and $dfe < $dfs){
-          $features{promoter}++;
-          $strains{$source}{insert_feature}{promoter}++;
-          $inserts{$insert_type}{promoter}++;
-        }elsif ($dfs <= 500 and $g2l == -1 and $dfs < $dfe){
-          $features{promoter}++;
-          $strains{$source}{insert_feature}{promoter}++;
-          $inserts{$insert_type}{promoter}++;
-        }
-        if ($dfe <= 500 and $g2r == -1 and $dfe < $dfs){
-          $features{threeprime}++;
-          $strains{$source}{insert_feature}{threeprime}++;
-          $inserts{$insert_type}{threeprime}++;
-        }elsif ($dfs <= 500 and $g2l == 1 and $dfs < $dfe){
-          $features{threeprime}++;
-          $strains{$source}{insert_feature}{threeprime}++;
-          $inserts{$insert_type}{threeprime}++;
+        if ($dfs <= 500 or $dfe <= 500) {
+          if ($g2l > 0 and $g2r > 0) {
+            if ( $dfs < $dfe){
+              $features{threeprime}++;
+              $strains{$source}{insert_feature}{threeprime}++;
+              $inserts{$insert_type}{threeprime}++;
+            }elsif ( $dfe < $dfs){
+              $features{promoter}++;
+              $strains{$source}{insert_feature}{promoter}++;
+              $inserts{$insert_type}{promoter}++;
+            }
+          }elsif ( $g2l < 0 and $g2r < 0){
+            if ( $dfs < $dfe){
+              $features{promoter}++;
+              $strains{$source}{insert_feature}{promoter}++;
+              $inserts{$insert_type}{promoter}++;
+            }elsif ( $dfe < $dfs ){
+              $features{threeprime}++;
+              $strains{$source}{insert_feature}{threeprime}++;
+              $inserts{$insert_type}{threeprime}++;
+            }
+          }elsif( $g2l > 0 and $g2r < 0){
+            $features{threeprime}++;
+            $strains{$source}{insert_feature}{threeprime}++;
+            $inserts{$insert_type}{threeprime}++;
+          }elsif ( $g2l < 0 and $g2r < 0){
+            $features{promoter}++;
+            $strains{$source}{insert_feature}{promoter}++;
+            $inserts{$insert_type}{promoter}++;
+          }elsif ( ($g2l == 0 and $g2r > 0)  or ($g2l < 0 and $g2r == 0) ){
+            if (($g2l == 0 and $dfe <= 500) or ($g2r ==0 and $dfs <= 500)){
+              $features{promoter}++;
+              $strains{$source}{insert_feature}{promoter}++;
+              $inserts{$insert_type}{promoter}++;
+            }
+          }elsif ( ($g2l == 0 and $g2r < 0) or ( $g2r ==0 and $g2l > 0)   ){
+            if ( ($g2l ==0 and $dfe <= 500 ) or ( $g2r == 0 and $dfs <= 500)  ){
+              $features{threeprime}++;
+              $strains{$source}{insert_feature}{threeprime}++;
+              $inserts{$insert_type}{threeprime}++;
+            }
+          }
         }
       }
       push @{$insert_dfs{$insert_feature}} , $dfs; 
