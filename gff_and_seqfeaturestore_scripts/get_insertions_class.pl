@@ -46,10 +46,68 @@ foreach my $feature (@features_type) {
   my $distance_from_end = '';
   my $dfs = '';
   my $dfe = '';
-  foreach my $loc_feature (@loc_features){
+
+
+  my %keeper;
+    if ( scalar @loc_features > 1 ) {
+      ##get most important feature.
+      foreach my $loc_feat (@loc_features) {
+        my $type = $loc_feat->type;
+        $type =~ s/:.+$//;
+        $keeper{$type} = $loc_feat;
+      }
+    }
+
+    my $loc_feature;
+    if ( exists $keeper{five_prime_UTR} or exists $keeper{three_prime_UTR} ) {
+      my $UTR;
+      if ( exists $keeper{five_prime_UTR} and exists $keeper{three_prime_UTR} )
+      {
+        if ( int( rand(2) ) != 1 ) {
+          $UTR = "five_prime_UTR";
+        }
+        else {
+          $UTR = "three_prime_UTR";
+        }
+      }
+      else {
+       $UTR =
+          exists $keeper{five_prime_UTR} ? "five_prime_UTR" : "three_prime_UTR";
+      }
+      $loc_feature = $keeper{$UTR};
+    }
+    elsif ( exists $keeper{exon} ) {
+      $loc_feature = $keeper{exon};
+    }
+    elsif ( exists $keeper{intron} ) {
+      $loc_feature = $keeper{intron};
+    }
+    elsif ( exists $keeper{intergenic} ) {
+      $loc_feature = $keeper{intergenic};
+    }
+    elsif ( exists $keeper{mRNA} ) {    ##if none of the above
+      $loc_feature = $keeper{mRNA};
+    }
+    elsif ( exists $keeper{gene} ) {
+      $loc_feature = $keeper{gene};
+    }
+    else {
+      print "there must be another type of feature: $ref:$start ", join '--',
+        keys %keeper, "\n";
+    }
+
+    #foreach my $loc_feature (@loc_features){
     my $type = $loc_feature->type;
     $type =~ s/:.+$//;
-    my $f_start = $loc_feature->start;
+
+    if ( $type eq 'mRNA' ) {
+      $type = 'intron';
+    }
+    elsif ( $type eq 'gene' ) {
+      $type = 'intergenic';
+    }
+
+    my $f_start  = $loc_feature->start;
     my $f_end = $loc_feature->end;
     my $f_strand = $loc_feature->strand;
     my $f_len = $loc_feature->length;
@@ -93,17 +151,6 @@ foreach my $feature (@features_type) {
        $gene2right = $upstream;
        $gene2left = $downstream;
      } 
-     if ( ($type eq 'three_prime_UTR' or $type eq 'five_prime_UTR') and (exists $each{$ref}{$start}{exon} or exists $each{$ref}{$start}{intron}) ){
-        delete $each{$ref}{$start}{exon} if exists $each{$ref}{$start}{exon} ;
-        delete $each{$ref}{$start}{intron} if exists $each{$ref}{$start}{intron} ;
-      }elsif ( ($type eq 'transposon_three_prime_UTR' or $type eq 'transposon_five_prime_UTR') and (exists $each{$ref}{$start}{transposon_exon} or exists $each{$ref}{$start}{transposon_intron})){
-        delete $each{$ref}{$start}{transposon_exon} if exists $each{$ref}{$start}{transposon_exon};
-        delete $each{$ref}{$start}{transposon_intron} if exists $each{$ref}{$start}{transposon_intron};
-      }elsif ( ($type eq 'exon' or $type eq 'intron') and (exists $each{$ref}{$start}{three_prime_UTR} or exists $each{$ref}{$start}{five_prime_UTR}) ){
-	next;
-      }elsif ( ($type eq 'transposon_exon' or $type eq 'transposon_intron')  and (exists $each{$ref}{$start}{transposon_three_prime_UTR} or exists $each{$ref}{$start}{transposon_five_prime_UTR}) ){
-	next;
-      }
       $each{$ref}{$start}{$type}{spanners}=$spanners;      
       $each{$ref}{$start}{$type}{flankers}=$avg_flankers;      
       $each{$ref}{$start}{$type}{f_end}=$f_end;      
@@ -122,7 +169,7 @@ foreach my $feature (@features_type) {
    
       }
     }
-  }
+  #}
 }
 
 
