@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
 use strict;
-
 #line from relocaTE.pl that calls this script
 #$scripts/relocaTE_align.pl $scripts $param_path $genome_file $outregex $TE $exper
 my $scripts     = shift;    #full path to scripts directory
@@ -22,6 +21,9 @@ my $TSD;
 while ( my $line = <INREGEX> ) {
   chomp $line;
   ( $mate_file_1, $mate_file_2, $mate_file_unpaired, $TSD ) = split /\t/, $line;
+  $mate_file_1 =~ s/\.(fq|fastq)$//;
+  $mate_file_2 =~ s/\.(fq|fastq)$//;
+  $mate_file_unpaired =~ s/\.(fq|fastq)$//;
 }
 
 my %flanking_fq;
@@ -70,6 +72,7 @@ if ( @files_1 and @files_2 ) {
 else {    ##if only unmatched files are provided
   my @files_singles = <$path/flanking_seq/*flankingReads.fq>;
   foreach my $file ( sort @files_singles ) {
+    next if -z $file;    ##next file if size is 0
     $flanking_fq{$file}{unpaired} = $file;
   }
 }
@@ -127,36 +130,17 @@ foreach my $key ( sort keys %flanking_fq ) {
     }  # end of if(-s "$flanking_fq_1.matched" and -s "$flanking_fq_2.matched" )
   }  #end of if ( exists $flanking_fq{$key}{1} and exists $flanking_fq{$key}{2})
 }    #end of foreach $key
-my @files2merge;
-foreach my $bowtie_out (@bowtie_out_files) {
-  if ( -s $bowtie_out ) {
-    #covert bowtie output to sam
-    #if using the bowtie option to produce sam files i am unable to get rid of duplicate alignments due to flags in col2
-    `bowtie2sam.pl $bowtie_out 1> $bowtie_out.sam 2>> $path/$target.stderr`;
 
-    #convert sam to bam
-`samtools import $genome_dir/$genome_fa.fai $bowtie_out.sam $bowtie_out.bam 2>> $path/$target.stderr`;
 
-    #sort bam
-    `samtools sort $bowtie_out.bam $bowtie_out.sorted 2>> $path/$target.stderr`;
-
-    #index bam
-    `samtools index $bowtie_out.sorted.bam 2>> $path/$target.stderr`;
-    push @files2merge, "$bowtie_out.sorted.bam" if -s "$bowtie_out.sorted.bam";
-  }    #end of if ( -s $bowtie_out )
-}    #end of foreach my $bowtie_out (@bowtie_out_files)
 my $files2merge;
-##if there are too many bam files to merge samtools can't handle it
-##so make smaller batches of merging,then merge the tmp bam files
-my $bam_file_count = scalar @files2merge;
-if ( @files2merge > 50 ) {
-  my $filecount = scalar @files2merge;
+my $filecount = scalar @bowtie_out_files;
+if ( $filecount > 50 ) {
   my @big_files_2_merge;
   for ( my $i = 0 ; $i < $filecount ; $i = $i + 50 ) {
-    $files2merge = join " ", ( splice( @files2merge, 0, 50 ) );
-    if (scalar @files2merge > 1){
-`samtools merge -f $path/bowtie_aln/$target.$TE.merged.bam.$i.temp $files2merge 2>> $path/$target.stderr`;
-      push @big_files_2_merge, "$path/bowtie_aln/$target.$TE.merged.bam.$i.temp";
+    $files2merge = join " ", ( splice( @bowtie_out_files, 0, 50 ) );
+    if (scalar @bowtie_out_files > 1){
+      `cat $files2merge > $path/bowtie_aln/$target.$TE.merged.bowtie.$i.temp`;
+      push @big_files_2_merge, "$path/bowtie_aln/$target.$TE.merged.bowtie.$i.temp";
     }else {
       ##if there is only 1 file after processing the 50, then just push onto @big_files_2_merge
       push @big_files_2_merge, $files2merge;
@@ -165,19 +149,12 @@ if ( @files2merge > 50 ) {
   $files2merge = join ' ', @big_files_2_merge if @big_files_2_merge;
 }
 else {
-  $files2merge = join ' ', @files2merge if @files2merge;
+  $files2merge = join ' ', @bowtie_out_files if @bowtie_out_files;
 }
-#merge paired and unPaired bam
-if (defined $files2merge){
-   my $bam_file;
-   if ($bam_file_count > 1){
-    `samtools merge -f $path/bowtie_aln/$target.$TE.merged.bam $files2merge 2>> $path/$target.stderr`;
-    `samtools sort $path/bowtie_aln/$target.$TE.merged.bam $path/bowtie_aln/$target.$TE.merged.sorted 2>> $path/$target.stderr`;
-  `  samtools index $path/bowtie_aln/$target.$TE.merged.sorted.bam 2>> $path/$target.stderr`;
-     $bam_file = "$path/bowtie_aln/$target.$TE.merged.sorted.bam";
-   }else { ##only one file. can't merge 1 file.
-     $bam_file = $files2merge;
-   }
-  #identify mping insertion sites
-  `$scripts/relocaTE_insertionFinder.pl $bam_file $target $genome_file $TE $TSD $exper`;
+
+my $merged_bowtie = "$path/bowtie_aln/$target.$TE.bowtie.out";
+if ($files2merge){
+  `cat $files2merge > $merged_bowtie`;
+}else {
+  `touch $merged_bowtie`;
 }

@@ -1,16 +1,40 @@
 #!/usr/bin/perl -w
+
+## 04212012: added the ability to use a tab-delimited list of existing TE locations 
+## to identify if the reference TE-insertion is present in the reads 
+## ----
 ## 02172012: changed the number of flanking reads that are needed for a 
 ## insert to be called from a total of 2 to (left>1 and right>1) therefore (total>3).  
 ## Also changed the max allowed mis-matches to 3
 
 use strict;
 
+my $required_reads = 3; ## rightReads + leftReads needs to be > or = to this value
+my $required_left_reads = 1; ## needs to be > to this value
+my $required_right_reads = 1; ## needs to be > to this value
 my $bowtie  = shift;
 my $usr_target  = shift;
 my $genome_path = shift;
 my $TE 		= shift;
 my $regex_file	= shift;
 my $exper	= shift;
+my $flank_len   = shift; ##length of seq flanking insertions to be returned
+my $existing_TE        = shift;
+my %existingTE;
+my %existingTE_found;
+if ($existing_TE ne 'NONE'){
+  open INTE, "$existing_TE" or die $!;
+  while (my $line = <INTE>){
+    chomp $line;
+    next if $line !~ /$usr_target/;
+    next if $line !~ /$TE/;
+    my ($te , $chr, $start, $end) = $line =~ /(\S+)\t(\S+):(\d+)\.\.(\d+)/;
+    ($start , $end) = sort {$a <=> $b} ($start, $end);
+    $existingTE{$te}{start}{$start} = $line;
+    $existingTE{$te}{end}{$end} = $line;
+  }
+}
+
 my $genome_seq;
 my $id;
 
@@ -87,8 +111,6 @@ foreach my $line (@sorted_bowtie) {
     ## format offset:reference-base>read-base
     my @mismatches = split ',' , $mismatch;
     my $mm_count = scalar @mismatches ;
-    ## mismatch allowance 1 in every 11 1/11 = 0.09
-    #next if ($mm_count/$len) > 0.1 ;
     ## only 3 mismatch allowed total
     next if $mm_count > 3 ;
     my $end = $len + $start - 1;
@@ -96,8 +118,11 @@ foreach my $line (@sorted_bowtie) {
 
     ## test to see if we are still within one insertion event or a different one
     ## is this seq aligned to same region, is it in range
-    my $padded_start = $bin[0] - 5;
-    my $padded_end   = $bin[-1] + 5;
+    ## if two sets of overlapping reads are separated by 5bp, these two sets
+    ## are considered to be one set. ==> $range_allowance
+    my $range_allowance = 5;
+    my $padded_start = $bin[0]  - $range_allowance;
+    my $padded_end   = $bin[-1] + $range_allowance;
     if (   ( $start >= $padded_start and $start <= $padded_end )
         or ( $end >= $padded_start and $end <= $padded_end ) )
     {
@@ -157,10 +182,13 @@ foreach my $insertionEvent ( sort { $a <=> $b } keys %teInsertions ) {
         my $right_count = $teInsertions{$insertionEvent}{$foundTSD}{$start}{right};
         my @reads       = @{ $teInsertions{$insertionEvent}{$foundTSD}{$start}{reads} };
 
-        if (( defined $left_count and defined $right_count and $left_count > 1  and  $right_count > 1 )) {
+        if ( ( defined $left_count and defined $right_count) 
+              and ($left_count  >  $required_left_reads)
+              and ($right_count >  $required_right_reads )
+              and (($right_count + $left_count) >= $required_reads)
+            ) {
             $event++;
             my $coor                  = $start + ($TSD_len - 1);
-            my $flank_len             = 100;
             my $zero_base_coor        = $coor - 1;
             my $sub_string_start      = $zero_base_coor - $flank_len + 1;
             my $seq_start             = $coor - $flank_len + 1;
@@ -192,8 +220,20 @@ my $tableLine = "$TE\t$foundTSD\t$exper\t$usr_target\t$coor\t$left_count\t$right
 }
 print OUTALL
 "
-total confident insertions identified by a right AND left mping flanking sequence (C>3,R>0,L>0)= $event
+total confident insertions identified by a right AND left mping flanking sequence (C>=$required_reads,R>$required_right_reads,L>$required_left_reads)= $event
 Note:C=total read count, R=right hand read count, L=left hand read count\n" if $event > 0;
+
+
+if (scalar ( keys %existingTE_found ) > 0){
+  open FOUND , ">>$results_dir/$exper.existing.$TE.found.txt" or die $!;
+  print FOUND "te\tstrain\texistingTE_coor\treads_align_2_start\treads_align_2_end\n" if -s "$results_dir/$exper.existing.$TE.found.txt" < 10;;
+  foreach my $found (keys %existingTE_found){
+    my $end_count =  exists $existingTE_found{$found}{end} ? $existingTE_found{$found}{end} : 0;
+    my $start_count = exists $existingTE_found{$found}{start} ? $existingTE_found{$found}{start} : 0; 
+     
+    print FOUND "$TE\t$exper\t$found\t$start_count\t$end_count\n";
+  }
+}
 
 sub TSD_check {
     my ( $event, $seq, $start, $pos, $read, $tsd ) = @_;
@@ -209,9 +249,19 @@ sub TSD_check {
         $TSD = $tsd;
     }
     if ( $result ) {
-        $teInsertions{$event}{$TSD}{$start}{count}++;
-        $teInsertions{$event}{$TSD}{$start}{left}++  if $pos eq 'left';
-        $teInsertions{$event}{$TSD}{$start}{right}++ if $pos eq 'right';
-        push @{ $teInsertions{$event}{$TSD}{$start}{reads} }, $read;
-    }
+        my ($tir1_end, $tir2_end) = ( ($start + (length $seq)) , ($start - 1));
+        if (exists $existingTE{$TE}{start}{$tir1_end}){
+          my $te_id = $existingTE{$TE}{start}{$tir1_end};
+          $existingTE_found{$te_id}{start}++;
+        }
+        elsif (exists $existingTE{$TE}{end}{$tir2_end}){
+          my $te_id = $existingTE{$TE}{end}{$tir2_end};
+          $existingTE_found{$te_id}{end}++;
+        }else{
+          $teInsertions{$event}{$TSD}{$start}{count}++;
+          $teInsertions{$event}{$TSD}{$start}{left}++  if $pos eq 'left';
+          $teInsertions{$event}{$TSD}{$start}{right}++ if $pos eq 'right';
+          push @{ $teInsertions{$event}{$TSD}{$start}{reads} }, $read;
+        }
+   }
 }

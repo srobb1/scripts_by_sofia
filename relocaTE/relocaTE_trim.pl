@@ -79,13 +79,13 @@ my $outte5      = 0;
 my $outte3      = 0;
 my $out_fq_path = "$te_path/te_containing_fq";
 my $out_fa_path = "$te_path/te_only_read_portions_fa";
-if ( -e "$out_fq_path/$FA.te_$TE.ContainingReads.fq" ) {
+if ( -e "$out_fq_path/$FA.te_$TE.ContainingReads.fq" and -s "$out_fq_path/$FA.te_$TE.ContainingReads.fq") {
   $outfq = 1;
 }
-if ( -e "$out_fa_path/$FA.te_$TE.five_prime.fa" ) {
+if ( -e "$out_fa_path/$FA.te_$TE.five_prime.fa" and -s "$out_fa_path/$FA.te_$TE.five_prime.fa") {
   $outte5 = 1;
 }
-if ( -e "$out_fa_path/$FA.te_$TE.three_prime.fa" ) {
+if ( -e "$out_fa_path/$FA.te_$TE.three_prime.fa" and -s "$out_fa_path/$FA.te_$TE.three_prime.fa") {
   $outte3 = 1;
 }
 open OUTFQ,  ">$out_fq_path/$FA.te_$TE.ContainingReads.fq" if !$outfq;
@@ -97,6 +97,7 @@ while ( my $line = <INFQ> ) {
   chomp $line;
   my $header = $line;
   $header = substr( $header, 1 );
+  $header =~ s/^(\S+)( .*)/$1/;
   chomp( my $seq        = <INFQ> );
   chomp( my $qualHeader = <INFQ> );
   chomp( my $qual       = <INFQ> );

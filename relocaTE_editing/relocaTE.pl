@@ -25,6 +25,9 @@ my $workingdir;
 my $outdir   = 'outdir_teSearch';
 my $parallel = 1;
 my $qsub_array = 1;
+my ($blat_minScore, $blat_tileSize)  = (10,7);
+my $flanking_seq_len = 100;
+my $existing_TE = 'NONE';
 GetOptions(
   'p|parallel:i'    => \$parallel,
   'a|qsub_array:i'    => \$qsub_array,
@@ -39,6 +42,10 @@ GetOptions(
   '1|mate_1_id:s'   => \$mate_file_1,
   '2|mate_2_id:s'   => \$mate_file_2,
   'u|unpaired_id:s' => \$mate_file_unpaired,
+  'bm|blat_minScore:i' => \$blat_minScore,
+  'bt|blat_tileSize:i' => \$blat_tileSize,
+  'f|flanking_seq_len:i' => \$flanking_seq_len,
+  'x|existing_TE:s' => \$existing_TE,
   'h|help'          => \&getHelp,
 );
 my $current_dir;
@@ -118,6 +125,27 @@ else {
     &getHelp();
   }
 }
+my $existing_TE_path;
+if ( $existing_TE ne 'NONE'){
+  if  (!-e $existing_TE){
+    print "The existing_TE file:$existing_TE, you provided can be not found\n";
+    &getHelp();
+  }else{
+    $existing_TE_path = File::Spec->rel2abs($existing_TE);
+    my $line = `head $existing_TE`;
+    if ($line !~ /\S+\t\S+:\d+\.\.\d+/){
+      print "The existing_TE file is not in the appropriate format:
+   
+mping   Chr12:839604..840033
+mping   Chr11:23200534..23200105
+
+TE_name<tab>ref_seqname:first_Base_Of_TIR1..Last_base_of_TIR2
+
+   ";
+   &getHelp();
+    }
+  }
+}
 
 sub getHelp {
   print ' 
@@ -144,7 +172,15 @@ options:
 -1 STR		regular expression to identify mate 1 paired files ex: file_1.fq or file_1.noNumbers.fq [\'_1\D*?fq\']
 -2 STR          regular expression to identify mate 2 paired files ex: file_2.fq or file_2.noNumbers.fq [\'_2\D*?fq\']
 -u STR          regular expression to identify unpaired files [\'.unPaired\D*?fq\'] 
+-bm INT		blat minScore value [10]
+-bt INT		blat tileSize value [7]
+-f INT		length of the sequence flanking the found insertion to be returned. This sequence is taken from the reference genome [100]
+-x STR		tab-delimited file containing the coordinates of existing TE.
 -h              this message
+
+SAMPLE Existing TE (the two columns are tab-delimited)
+mping   Chr12:839604..840033
+mping   Chr12:1045463..1045892
 
 SAMPLE TE FASTA
 >mping TSD=TTA
@@ -370,7 +406,7 @@ open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh" if $qsu
     #use pre-existing blatout files
     if ( !-e "$path/blat_output/$fa_name.te_$TE.blatout" ) {
       my $cmd =
-"blat -minScore=10 -tileSize=7 $te_path $fa $path/blat_output/$fa_name.te_$TE.blatout";
+"blat -minScore=$blat_minScore -tileSize=$blat_tileSize $te_path $fa $path/blat_output/$fa_name.te_$TE.blatout";
       print OUTSH "$cmd\n" if $parallel;
       `$cmd` if !$parallel;
     }
@@ -426,7 +462,7 @@ open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh" if $qsu
       $genome_path =~ /.+\/(.+)\.fa$/;
       my $ref = $1;
       my $merged_bowtie = "$path/$ref/bowtie_aln/$ref.$TE.bowtie.out";
-      my $cmd = "$scripts/relocaTE_insertionFinder.pl $merged_bowtie $target $genome_file $TE $outregex $exper";
+      my $cmd = "$scripts/relocaTE_insertionFinder.pl $merged_bowtie $target $genome_file $TE $outregex $exper $flanking_seq_len $existing_TE_path";
       if ( !$parallel ) {
         `$cmd`;
       }
