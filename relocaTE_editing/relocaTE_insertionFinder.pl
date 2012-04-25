@@ -231,7 +231,7 @@ if (scalar ( keys %existingTE_found ) > 0){
     my $end_count =  exists $existingTE_found{$found}{end} ? $existingTE_found{$found}{end} : 0;
     my $start_count = exists $existingTE_found{$found}{start} ? $existingTE_found{$found}{start} : 0; 
      
-    print FOUND "$TE\t$exper\t$found\t$start_count\t$end_count\n";
+    print FOUND "$TE\t$exper\tt$start_count\t$end_count\n";
   }
 }
 

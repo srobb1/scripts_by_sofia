@@ -38,7 +38,7 @@ my $filename = pop @dir_path;
 $cwd =~ s/\/$//;    #remove trailing /
 open OUTGFF, ">$cwd/$filename.homo_het.gff";
 print
-  "chromosome.pos\tavg_flankers\tspanners\tstatus\n"; #\t$Smatch\t$cigar_all\n";
+  "strain\tTE\tTSD\tchromosome.pos\tavg_flankers\tspanners\tstatus\n"; #\t$Smatch\t$cigar_all\n";
 my %matches;
 
 while ( my $line = <INSITES> ) {
