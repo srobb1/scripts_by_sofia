@@ -226,12 +226,12 @@ Note:C=total read count, R=right hand read count, L=left hand read count\n" if $
 
 if (scalar ( keys %existingTE_found ) > 0){
   open FOUND , ">>$results_dir/$exper.existing.$TE.found.txt" or die $!;
-  print FOUND "te\tstrain\texistingTE_coor\treads_align_2_start\treads_align_2_end\n" if -s "$results_dir/$exper.existing.$TE.found.txt" < 10;;
+  print FOUND "strain\texistingTE_coor\treads_align_2_start\treads_align_2_end\n" if -s "$results_dir/$exper.existing.$TE.found.txt" < 10;;
   foreach my $found (keys %existingTE_found){
     my $end_count =  exists $existingTE_found{$found}{end} ? $existingTE_found{$found}{end} : 0;
     my $start_count = exists $existingTE_found{$found}{start} ? $existingTE_found{$found}{start} : 0; 
      
-    print FOUND "$TE\t$exper\tt$start_count\t$end_count\n";
+    print FOUND "$exper\t$found\t$start_count\t$end_count\n";
   }
 }
 

@@ -243,8 +243,9 @@ foreach my $source ( sort keys %sources ) {
         my $g2l    = $each{$ref}{$start}{$insert_feature}{gene2left};
 
         my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
+        my $promoter_cut_off = 750;
         if ( $insert_feature =~ /intergenic/ ) {
-          if ( $dfs <= 500 or $dfe <= 500 ) {
+          if ( $dfs <= $promoter_cut_off or $dfe <= $promoter_cut_off ) {
             if ( $g2l > 0 and $g2r > 0 ) {
               if ( $dfs < $dfe ) {
                 $features{threeprime}++;
@@ -274,14 +275,14 @@ foreach my $source ( sort keys %sources ) {
               $strains{$source}{insert_feature}{threeprime}++;
               $inserts{$insert_type}{threeprime}++;
             }
-            elsif ( $g2l < 0 and $g2r < 0 ) {
+            elsif ( $g2l < 0 and $g2r > 0 ) {
               $features{promoter}++;
               $strains{$source}{insert_feature}{promoter}++;
               $inserts{$insert_type}{promoter}++;
             }
             elsif ( ( $g2l == 0 and $g2r > 0 ) or ( $g2l < 0 and $g2r == 0 ) ) {
-              if ( ( $g2l == 0 and $dfe <= 500 )
-                or ( $g2r == 0 and $dfs <= 500 ) )
+              if ( ( $g2l == 0 and $dfe <= $promoter_cut_off )
+                or ( $g2r == 0 and $dfs <= $promoter_cut_off ) )
               {
                 $features{promoter}++;
                 $strains{$source}{insert_feature}{promoter}++;
@@ -289,8 +290,8 @@ foreach my $source ( sort keys %sources ) {
               }
             }
             elsif ( ( $g2l == 0 and $g2r < 0 ) or ( $g2r == 0 and $g2l > 0 ) ) {
-              if ( ( $g2l == 0 and $dfe <= 500 )
-                or ( $g2r == 0 and $dfs <= 500 ) )
+              if ( ( $g2l == 0 and $dfe <= $promoter_cut_off )
+                or ( $g2r == 0 and $dfs <= $promoter_cut_off ) )
               {
                 $features{threeprime}++;
                 $strains{$source}{insert_feature}{threeprime}++;
