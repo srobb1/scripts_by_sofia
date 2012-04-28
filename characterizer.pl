@@ -103,6 +103,8 @@ while ( my $line = <INSITES> ) {
           $Mmatch++;
         }elsif (!defined $NM and !defined $XM){
           $Mmatch++;
+        }else{
+          $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
         }
       }
       #elsif ( $cigar !~ /S/ and $cigar =~ /[IND]/ ) {
@@ -110,6 +112,9 @@ while ( my $line = <INSITES> ) {
 
         #push @{$matches{"$chromosome.$pos"}{sam}} , $sam_line;
         $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
+      }else {
+        $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
+
       }
 
       #$cigar_all.="$cigar,";
@@ -165,7 +170,6 @@ while ( my $line = <INSITES> ) {
   }
 }
 ##generate vcf of spanners looking for excision events
-__END__
 my @unlink_files;
 foreach my $pos ( keys %matches ) {
   my ( $target, $loc ) = split /\./, $pos;
