@@ -170,6 +170,7 @@ while ( my $line = <INSITES> ) {
   }
 }
 ##generate vcf of spanners looking for excision events
+__END__
 my @unlink_files;
 foreach my $pos ( keys %matches ) {
   my ( $target, $loc ) = split /\./, $pos;

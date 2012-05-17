@@ -121,7 +121,7 @@ foreach my $key ( sort keys %flanking_fq ) {
     if (  -s "$flanking_fq_1.matched"
       and -s "$flanking_fq_2.matched" )
     {
-`bowtie --best -q $genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched 1> $path/bowtie_aln/$target.$fq_name.bowtie.mates.out 2>> $path/$target.stderr`;
+`bowtie --best  -q $genome_file.bowtie_build_index -1 $flanking_fq_1.matched -2 $flanking_fq_2.matched 1> $path/bowtie_aln/$target.$fq_name.bowtie.mates.out 2>> $path/$target.stderr`;
       push @bowtie_out_files,
         "$path/bowtie_aln/$target.$fq_name.bowtie.mates.out";
 `bowtie --best -q $genome_file.bowtie_build_index $te_dir_path/flanking_seq/$fq_name.unPaired.fq 1> $path/bowtie_aln/$target.$fq_name.bowtie.unPaired.out 2>> $path/$target.stderr`;

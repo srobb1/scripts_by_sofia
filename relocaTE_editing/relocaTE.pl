@@ -17,9 +17,9 @@ my $len_cutoff         = 10;
 my $mismatch_allowance = 0;
 my $fq_dir;
 my $exper = 'not.given';
-my $mate_file_1        = '_1\D*?fq';
-my $mate_file_2        = '_2\D*?fq';
-my $mate_file_unpaired = '.unPaired\D*?fq';
+my $mate_file_1        = '_p1';
+my $mate_file_2        = '_p2';
+my $mate_file_unpaired = '.unPaired';
 my $workingdir;
 my $outdir     = 'outdir_teSearch';
 my $parallel   = 1;
@@ -173,11 +173,11 @@ options:
 -w STR          base working directory, needs to exist, will not create, full path [cwd] 
 -l INT          len cutoff for the TE trimmed reads to be aligned [10] 
 -m FRACTION     mismatch allowance for alignment to TE (ex 0.1) [0] 
--1 STR		regular expression to identify mate 1 paired files ex: file_1.fq or file_1.noNumbers.fq [\'_1\D*?fq\']
--2 STR          regular expression to identify mate 2 paired files ex: file_2.fq or file_2.noNumbers.fq [\'_2\D*?fq\']
--u STR          regular expression to identify unpaired files [\'.unPaired\D*?fq\'] 
--bm INT		blat minScore value [10]
--bt INT		blat tileSize value [7]
+-1 STR		regular expression to identify mate 1 paired files ex: file_p1.fq or file_1.noNumbers.fq [\'_p1\']
+-2 STR          regular expression to identify mate 2 paired files ex: file_p2.fq or file_2.noNumbers.fq [\'_p2\']
+-u STR          regular expression to identify unpaired files ex: file.unPaired.fq[\'.unPaired\'] 
+-bm INT		blat minScore value, in comparison of reads to TE sequence [10]
+-bt INT		blat tileSize value, in comparison of reads to TE sequence  [7]
 -f INT		length of the sequence flanking the found insertion to be returned. This sequence is taken from the reference genome [100]
 -x STR		tab-delimited file containing the coordinates of existing TE.
 -h              this message
@@ -355,6 +355,7 @@ if ( $fq_dir ne 'SKIP' ) {
     unlink "$current_dir/$top_dir/shellscripts/run.step_2.sh";
   }
 }    ##end if $fq_dir ne 'SKIP'
+close QSUBARRAY2;
 ##split TE fasta into single record fastas
 my @te_fastas;
 my %TSD;
@@ -409,7 +410,7 @@ foreach my $te_path (@te_fastas) {
 
   open QSUBARRAY3, ">$current_dir/$top_dir/shellscripts/$TE.run.step_3.sh"
     if $qsub_array;
-  open QSUBARRAY5, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh"
+  open QSUBARRAY4, ">$current_dir/$top_dir/shellscripts/$TE.run.step_5.sh"
     if $qsub_array;
   for ( my $i = 0 ; $i < $fq_file_count ; $i++ ) {
     my $fa = $fa[$i];
@@ -505,16 +506,48 @@ foreach my $te_path (@te_fastas) {
     if ($qsub_array) {
       print QSUBARRAY "qsub -t 0-", $genome_count - 1,
         " $current_dir/$top_dir/shellscripts/$TE.run.step_5.sh\n";
-      print QSUBARRAY5
+      print QSUBARRAY4
 "sh $current_dir/$top_dir/shellscripts/step_5/$TE/\$PBS_ARRAYID.$TE.findSites.sh";
     }
   }
   if ($qsub_array) {
     close QSUBARRAY3;
-    close QSUBARRAY5;
+    close QSUBARRAY4;
   }
 }
+
+##cat all '.te_insertion_sites.table.txt' results into one file
+foreach my $te_path (@te_fastas) {
+  my @path     = split '/', $te_path;
+  my $te_fasta = pop @path;
+  my $path     = join '/', @path;
+  my $TE       = $te_fasta;
+  $TE =~ s/\.fa//;
+    if ($parallel){
+      `mkdir -p $current_dir/$top_dir/shellscripts/step_6/$TE`;
+      open FINISH , ">$current_dir/$top_dir/shellscripts/step_6/$TE/step_6.$TE.finishing.sh";
+      print FINISH 
+"echo \"TE\tTSD\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\" > $path/results/temp
+grep -v flanking_read_count $path/results/*.$TE.te_insertion_sites.table.txt >> $path/results/temp
+mv $path/results/temp $path/results/all.$TE.te_insertion_sites.table.txt\n";
+      `chmod +x $current_dir/$top_dir/shellscripts/step_6/$TE/step_6.$TE.finishing.sh`;
+    }
+    if ($qsub_array){
+      print QSUBARRAY "qsub $current_dir/$top_dir/shellscripts/step_6/$TE/step_6.$TE.finishing.sh\n"; 
+    }
+    if (!$parallel and !$qsub_array){
+      ##do it now
+      `echo \"TE\tTSD\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\" > $path/results/all.$TE.te_insertion_sites.table.txt`;
+      my @files = `ls $path/results/*.$TE.te_insertion_sites.table.txt`;
+      foreach my $file (@files){
+        chomp $file;
+        next if $file =~ /^all/;
+        `grep -v flanking_read_count $path/results/*.$TE.te_insertion_sites.table.txt >> $path/results/all.$TE.te_insertion_sites.table.txt`;
+      }
+     }
+    close FINISH;
+}
+
 if ($qsub_array) {
   close QSUBARRAY;
-  close QSUBARRAY2;
 }

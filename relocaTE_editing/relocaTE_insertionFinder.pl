@@ -163,12 +163,10 @@ open OUTALL,   ">$results_dir/$usr_target.$TE.te_insertion.all.txt"         or d
 open OUTGFF,   ">$results_dir/$usr_target.$TE.te_insertion_sites.gff"        or die $!;
 open OUTTABLE, ">$results_dir/$usr_target.$TE.te_insertion_sites.table.txt"  or die $!;
 open OUTLIST,  ">$results_dir/$usr_target.$TE.te_insertion_sites.reads.list" or die $!;
-open OUTALLTABLE, ">>$results_dir/all.$TE.te_insertion_sites.table.txt"  or die $!;
 print OUTGFF "##gff-version	3\n";
 ##output in tab delimited table
 my $tableHeader = "TE\tTSD\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\n";
 print OUTTABLE $tableHeader;
-print OUTALLTABLE $tableHeader if -s "$results_dir/all.$TE.te_insertion_sites.table.txt" < 100;
 
 foreach my $insertionEvent ( sort { $a <=> $b } keys %teInsertions ) {
   foreach my $foundTSD (sort keys %{$teInsertions{$insertionEvent}}){
@@ -199,7 +197,6 @@ foreach my $insertionEvent ( sort { $a <=> $b } keys %teInsertions ) {
               $zero_base_coor + 1, $flank_len;
 my $tableLine = "$TE\t$foundTSD\t$exper\t$usr_target\t$coor\t$left_count\t$right_count\t$left_flanking_ref_seq\t$right_flanking_ref_seq\n";
             print OUTTABLE $tableLine;
-            print OUTALLTABLE $tableLine;
             print OUTGFF
 "$usr_target\t$exper\ttransposable_element_insertion_site\t$coor\t$coor\t.\t.\t.\tID=$TE.te_insertion_site.$usr_target.$coor;left_flanking_read_count=$left_count;right_flanking_read_count=$right_count;left_flanking_seq=$left_flanking_ref_seq;right_flanking_seq=$right_flanking_ref_seq;TSD=$foundTSD\n";
             print OUTFASTA
