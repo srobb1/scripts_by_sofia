@@ -528,7 +528,7 @@ foreach my $te_path (@te_fastas) {
       open FINISH , ">$current_dir/$top_dir/shellscripts/step_6/$TE/step_6.$TE.finishing.sh";
       print FINISH 
 "echo \"TE\tTSD\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\" > $path/results/temp
-grep -v flanking_read_count $path/results/*.$TE.te_insertion_sites.table.txt >> $path/results/temp
+for i in \`ls $path/results/*.$TE.te_insertion_sites.table.txt\` ; do grep -v flanking_read_count \$i >> $path/results/temp ; done
 mv $path/results/temp $path/results/all.$TE.te_insertion_sites.table.txt\n";
       `chmod +x $current_dir/$top_dir/shellscripts/step_6/$TE/step_6.$TE.finishing.sh`;
     }
@@ -537,13 +537,13 @@ mv $path/results/temp $path/results/all.$TE.te_insertion_sites.table.txt\n";
     }
     if (!$parallel and !$qsub_array){
       ##do it now
-      `echo \"TE\tTSD\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\" > $path/results/all.$TE.te_insertion_sites.table.txt`;
-      my @files = `ls $path/results/*.$TE.te_insertion_sites.table.txt`;
-      foreach my $file (@files){
-        chomp $file;
-        next if $file =~ /^all/;
-        `grep -v flanking_read_count $path/results/*.$TE.te_insertion_sites.table.txt >> $path/results/all.$TE.te_insertion_sites.table.txt`;
-      }
+      `echo \"TE\tTSD\tExper\tchromosome\tinsertion_site\tleft_flanking_read_count\tright_flanking_read_count\tleft_flanking_seq\tright_flanking_seq\" > $path/results/temp`;
+        my @files = `ls $path/results/*.$TE.te_insertion_sites.table.txt`;
+        foreach my $file (@files){
+          chomp $file;
+         `grep -v flanking_read_count $file  >> $path/results/temp`;
+        } 
+       `mv $path/results/temp $path/results/all.$TE.te_insertion_sites.table.txt`;
      }
     close FINISH;
 }
