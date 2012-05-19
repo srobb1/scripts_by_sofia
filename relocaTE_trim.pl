@@ -1,14 +1,28 @@
 #!/usr/bin/perl -w
 use strict;
 ##blat parser and fq trimmer
+## April 21, 2012: changed the behavior of more than one blat hit to same query seq.
+## if on the same strand keep best TE hit
+## if on diff strands, this is a likely tandem insert, throw out reads, make a list
+## of potential tandem insert reads
+
 my $blat_file          = shift;
 my $fq_file_1          = shift;
 my $len_cutoff         = shift;
 my $mismatch_allowance = shift;
-$len_cutoff         = defined $len_cutoff         ? $len_cutoff         : 10;
-$mismatch_allowance = defined $mismatch_allowance ? $mismatch_allowance : 0.1;
 
-open INBLAT, $blat_file, or die "Please provide a blat output file\n";
+open INFQ, $fq_file_1 or die $!;
+my @blat_path = split '/', $blat_file;
+my $filename  = pop @blat_path;
+my $blat_path = join '/', @blat_path;
+pop @blat_path;
+my $te_path = join '/', @blat_path;
+my $out_fq_path = "$te_path/te_containing_fq";
+my $out_fa_path = "$te_path/te_only_read_portions_fa";
+
+
+open (INBLAT, $blat_file) or die "Please provide a blat output file\n";
+open (OUTTANDEM,  ">$out_fq_path/$filename.potential_tandemInserts_containing_reads.list.txt") or die "Can't open $filename.potential_tandemInserts_containing_reads.list.txt or writing\n";
 
 <INBLAT>;    #get rid of blat header lines
 <INBLAT>;
@@ -32,17 +46,30 @@ while ( my $line = <INBLAT> ) {
   my $tEnd   = $blat[16] - 1; #get all values into 1st base = 0 postion notation
   my $block_qStarts = $blat[19];
   my ($block_qStart) = split ',', $block_qStarts;
-  my $addRecord;
-  ##multi hits for same query read: mping match smaller therefore non-mping seq longer
-  if ( exists $coord{$qName} ) {
-    if ( $match < $coord{$qName}{match} ) {
+  my $addRecord = 0;
+  if (exists $coord{$qName}){
+    if ($strand eq $coord{$qName}{strand}){ 
+      ##if there is are tandem insertions, theses reads
+      ##will call many false insertions events.
+      ##if on the same strand, the matches are not likely to overlap, 
+      ##the two regions would be separated by mismatches or gaps if they were not
+      ##tandem insetions
+      print OUTTANDEM "$qName\n";
+      $qStart = $qStart <  $coord{$qName}{start} ? $qStart :  $coord{$qName}{start}; 
+      $qEnd = $qEnd >  $coord{$qName}{end} ? $qEnd :  $coord{$qName}{end}; 
+      $tStart = $tStart <  $coord{$qName}{tStart} ? $tStart :  $coord{$qName}{tStart}; 
+      $tEnd = $tEnd >  $coord{$qName}{tEnd} ? $tEnd :  $coord{$qName}{tEnd};
+      $match = ($coord{$qName}{match} + $match) > $qLen ? $qLen : $coord{$qName}{match} + $match ;
       $addRecord = 1;
+    }else {
+      ##keep the best match to TE
+      if ($coord{$qName}{match} >= $match ){
+        $addRecord = 0;
+      }else{
+        $addRecord = 1;
+      }
     }
-    else {
-      $addRecord = 0;
-    }
-  }
-  else {
+  }else {
     $addRecord = 1;
   }
   if ($addRecord) {
@@ -58,12 +85,6 @@ while ( my $line = <INBLAT> ) {
   }
 }
 
-open INFQ, $fq_file_1 or die $!;
-my @blat_path = split '/', $blat_file;
-my $filename  = pop @blat_path;
-my $blat_path = join '/', @blat_path;
-pop @blat_path;
-my $te_path = join '/', @blat_path;
 
 my $TE = "unspecified";
 my $FA = "unspecified";
@@ -77,8 +98,6 @@ if ( $filename =~ /(\S+)\.te_(\S+)\.blatout/ ) {
 my $outfq       = 0;
 my $outte5      = 0;
 my $outte3      = 0;
-my $out_fq_path = "$te_path/te_containing_fq";
-my $out_fa_path = "$te_path/te_only_read_portions_fa";
 if ( -e "$out_fq_path/$FA.te_$TE.ContainingReads.fq" and -s "$out_fq_path/$FA.te_$TE.ContainingReads.fq") {
   $outfq = 1;
 }
@@ -183,4 +202,3 @@ while ( my $line = <INFQ> ) {
     }
   }
 }
-
