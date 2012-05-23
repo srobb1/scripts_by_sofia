@@ -6,7 +6,11 @@ my $in_fa = shift;
 my $coordinate = shift;
 my $padding = shift;
 if (!defined $padding or !defined $coordinate or !defined $in_fa){
-  die "Please provide a fastaFile, cooridinate (ex. Chr1.28184849) and a Padding\n";
+  die "Please provide a fastaFile, cooridinate (ex. Chr1.28184849) and a Padding
+example:
+	get_subseq_from_postition.pl Chr1.fa Chr1.28184849 700
+
+";
 }
 my ($ref , $position) = $coordinate =~ /(\S+)\.(\d+)/;
 open INFA, $in_fa or die $!;
