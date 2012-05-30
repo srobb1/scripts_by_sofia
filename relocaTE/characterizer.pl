@@ -38,7 +38,7 @@ my $filename = pop @dir_path;
 $cwd =~ s/\/$//;    #remove trailing /
 open OUTGFF, ">$cwd/$filename.homo_het.gff";
 print
-  "chromosome.pos\tavg_flankers\tspanners\tstatus\n"; #\t$Smatch\t$cigar_all\n";
+  "strain\tTE\tTSD\tchromosome.pos\tavg_flankers\tspanners\tstatus\n"; #\t$Smatch\t$cigar_all\n";
 my %matches;
 
 while ( my $line = <INSITES> ) {
@@ -103,6 +103,8 @@ while ( my $line = <INSITES> ) {
           $Mmatch++;
         }elsif (!defined $NM and !defined $XM){
           $Mmatch++;
+        }else{
+          $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
         }
       }
       #elsif ( $cigar !~ /S/ and $cigar =~ /[IND]/ ) {
@@ -110,6 +112,9 @@ while ( my $line = <INSITES> ) {
 
         #push @{$matches{"$chromosome.$pos"}{sam}} , $sam_line;
         $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
+      }else {
+        $matches{"$chromosome.$pos"}{sam}{$sam_line} = 1;
+
       }
 
       #$cigar_all.="$cigar,";

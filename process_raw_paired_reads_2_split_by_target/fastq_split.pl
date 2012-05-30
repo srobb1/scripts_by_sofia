@@ -10,10 +10,29 @@ my %uncompress = ('bz2' => 'bzcat',
 
 my $size = 1_000_000;
 my $outdir;
+
+if (!defined @ARGV){
+  print "Please Provide 
+-s int The number of sequences per file [1_000_000]
+-o dir The name of the directory to output the files
+followed by a list of files to be split
+
+Usage:
+./fastq_split -o split_fq ~/somedir/someRandom.fq
+./fastq_split -o split_fq ~/somedir/*fq
+
+";
+exit;
+}
+
 GetOptions('s|size:i'  => \$size,
 	   'o|outdir:s' => \$outdir,
 	   );
 my @files = @ARGV;
+
+if (!-e $outdir){
+  system ("mkdir -p $outdir");
+}
 
 for my $file ( @files ) {
     $file = File::Spec->rel2abs($file);
