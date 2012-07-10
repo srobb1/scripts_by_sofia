@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-# Liping Hou
 
 use strict;
 
@@ -8,17 +7,28 @@ my $pre = shift(@ARGV);
 my ($fq1, $fq2);
 open($fq1, ">${pre}_1.fastq") || die;
 open($fq2, ">${pre}_2.fastq") || die;
-while (<>) {
-    chomp;
-    print $fq1 $_ . "\n";
-    $_ = <>; print $fq1 $_;
-    $_ = <>; print $fq1 $_;
-    $_ = <>; print $fq1 $_;
-    $_ = <>; chomp; print $fq2 $_ . "\n";
-    $_ = <>; print $fq2 $_;
-    $_ = <>; print $fq2 $_;
-    $_ = <>; print $fq2 $_;
+while (my $header = <>) {
+   unless ($header =~ /^@/) {
+      die(
+"doesn't look like a header, got line:\n$header  but expected line to start with '\@'\n"
+      );
+    }
+    print $fq1 $header;
+    for ( 0 .. 2 ) {
+      my $line = <>;
+      print $fq1 $line;
+    }
+   $header         = <>; 
+   unless ($header =~ /^@/) {
+      die(
+"doesn't look like a header, got line:\n$header  but expected line to start with '\@'\n"
+      );
+    }
+    print $fq2 $header;
+    for ( 0 .. 2 ) {
+      my $line = <>;
+      print $fq2 $line;
+    }
 }
 close($fq1);
 close($fq2);
-
