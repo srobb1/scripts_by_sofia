@@ -2,6 +2,8 @@
 use strict;
 use File::Spec;
 use Cwd;
+## this script uses
+##use file_3 and file_4 to fill in any un_mate-ed reads in files 1 and 2
 
 my $list_file = shift;
 my $dir = shift;

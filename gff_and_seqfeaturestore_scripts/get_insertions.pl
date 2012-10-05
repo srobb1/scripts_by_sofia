@@ -6,6 +6,14 @@ use Statistics::Descriptive;
 use File::Spec;
 
 my $sqlite = shift;
+my $promoter_cut_off = shift; 
+
+if (!defined $promoter_cut_off){
+  $promoter_cut_off =750;
+}
+
+#die "$promoter_cut_off\n";
+
 die "Please provide a SQLite datafile of a seqfeature db" if !defined $sqlite;
 $sqlite = File::Spec->rel2abs($sqlite);
 
@@ -95,7 +103,7 @@ foreach my $source ( sort keys %sources ) {
       my $UTR;
       if ( exists $keeper{five_prime_UTR} and exists $keeper{three_prime_UTR} )
       {
-        if ( int( rand(2) ) != 1 ) {
+       if ( int( rand(2) ) != 1 ) {
           $UTR = "five_prime_UTR";
         }
         else {
@@ -243,7 +251,6 @@ foreach my $source ( sort keys %sources ) {
         my $g2l    = $each{$ref}{$start}{$insert_feature}{gene2left};
 
         my $insert_type = $each{$ref}{$start}{$insert_feature}{insert_type};
-        my $promoter_cut_off = 750;
         if ( $insert_feature =~ /intergenic/ ) {
           if ( $dfs <= $promoter_cut_off or $dfe <= $promoter_cut_off ) {
             if ( $g2l > 0 and $g2r > 0 ) {
@@ -251,11 +258,21 @@ foreach my $source ( sort keys %sources ) {
                 $features{threeprime}++;
                 $strains{$source}{insert_feature}{threeprime}++;
                 $inserts{$insert_type}{threeprime}++;
+
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
               }
               elsif ( $dfe < $dfs ) {
                 $features{promoter}++;
                 $strains{$source}{insert_feature}{promoter}++;
                 $inserts{$insert_type}{promoter}++;
+
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
               }
             }
             elsif ( $g2l < 0 and $g2r < 0 ) {
@@ -263,22 +280,42 @@ foreach my $source ( sort keys %sources ) {
                 $features{promoter}++;
                 $strains{$source}{insert_feature}{promoter}++;
                 $inserts{$insert_type}{promoter}++;
+
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
               }
               elsif ( $dfe < $dfs ) {
                 $features{threeprime}++;
                 $strains{$source}{insert_feature}{threeprime}++;
                 $inserts{$insert_type}{threeprime}++;
+
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
               }
             }
             elsif ( $g2l > 0 and $g2r < 0 ) {
               $features{threeprime}++;
               $strains{$source}{insert_feature}{threeprime}++;
               $inserts{$insert_type}{threeprime}++;
+
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
             }
             elsif ( $g2l < 0 and $g2r > 0 ) {
               $features{promoter}++;
               $strains{$source}{insert_feature}{promoter}++;
               $inserts{$insert_type}{promoter}++;
+
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
             }
             elsif ( ( $g2l == 0 and $g2r > 0 ) or ( $g2l < 0 and $g2r == 0 ) ) {
               if ( ( $g2l == 0 and $dfe <= $promoter_cut_off )
@@ -287,6 +324,11 @@ foreach my $source ( sort keys %sources ) {
                 $features{promoter}++;
                 $strains{$source}{insert_feature}{promoter}++;
                 $inserts{$insert_type}{promoter}++;
+
+                my $new = "intergenic.promoter";
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
               }
             }
             elsif ( ( $g2l == 0 and $g2r < 0 ) or ( $g2r == 0 and $g2l > 0 ) ) {
@@ -296,6 +338,11 @@ foreach my $source ( sort keys %sources ) {
                 $features{threeprime}++;
                 $strains{$source}{insert_feature}{threeprime}++;
                 $inserts{$insert_type}{threeprime}++;
+
+                my $tmp = $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                $each{$ref}{$start}{$new} = $tmp;
+                delete $each{$ref}{$start}{$insert_feature};
               }
             }
           }

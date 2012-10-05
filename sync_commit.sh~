@@ -22,13 +22,13 @@ rsync -uL ~/bin/process_raw_paired_reads_2_split_by_target/* ~/src/TEamRice/proc
 
 
 cd ~/src/scripts_by_sofia
-/usr/bin/git add *
-/usr/bin/git status >> ~/sync_commit.log
-/usr/bin/git commit -m 'daily commit of any changes to all scritps'
-/usr/bin/git push
+/usr/local/bin/git add *
+/usr/local/bin/git status >> ~/sync_commit.log
+/usr/local/bin/git commit -m 'daily commit of any changes to all scritps'
+/usr/local/bin/git push
 
 cd ~/src/TEamRice
-/usr/bin/git add *
-/usr/bin/git status >> ~/sync_commit.log
-/usr/bin/git commit -m 'daily commit of any changes to all scritps'
-/usr/bin/git push
+/usr/local/bin/git add *
+/usr/local/bin/git status >> ~/sync_commit.log
+/usr/local/bin/git commit -m 'daily commit of any changes to all scritps'
+/usr/local/bin/git push

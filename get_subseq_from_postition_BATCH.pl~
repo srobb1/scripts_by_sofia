@@ -26,7 +26,7 @@ my $db_obj = Bio::DB::Fasta->new($dbfile);
 foreach my $coordinate ( sort @coordinates ) {
   my ( $ref, $position ) = $coordinate =~ /(\S+)\.(\d+)/;
   if (!defined $ref or !defined $position){
-    die "please supply correctly formatted cooridinates Chr1.18713620\n";
+    die "please supply correctly formatted cooridinates Chr1:18713620\n";
   }
   # retrieve a sequence
   my $seq_obj = $db_obj->get_Seq_by_id($ref);

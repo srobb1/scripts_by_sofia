@@ -258,21 +258,29 @@ foreach my $source ( sort keys %sources ) {
                 $features{threeprime}++;
                 $strains{$source}{insert_feature}{threeprime}++;
                 $inserts{$insert_type}{threeprime}++;
-
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                my $new = "intergenic.threeprimeprime";
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                #my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
               }
               elsif ( $dfe < $dfs ) {
                 $features{promoter}++;
                 $strains{$source}{insert_feature}{promoter}++;
                 $inserts{$insert_type}{promoter}++;
-
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                my $new = "intergenic.promoter";
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                #my $new = "intergenic.threeprimeprime";
+                my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
               }
             }
             elsif ( $g2l < 0 and $g2r < 0 ) {
@@ -280,42 +288,58 @@ foreach my $source ( sort keys %sources ) {
                 $features{promoter}++;
                 $strains{$source}{insert_feature}{promoter}++;
                 $inserts{$insert_type}{promoter}++;
-
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                my $new = "intergenic.promoter";
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                #my $new = "intergenic.threeprimeprime";
+                my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
               }
               elsif ( $dfe < $dfs ) {
                 $features{threeprime}++;
                 $strains{$source}{insert_feature}{threeprime}++;
                 $inserts{$insert_type}{threeprime}++;
-
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                my $new = "intergenic.threeprimeprime";
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                #my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
               }
             }
             elsif ( $g2l > 0 and $g2r < 0 ) {
               $features{threeprime}++;
               $strains{$source}{insert_feature}{threeprime}++;
               $inserts{$insert_type}{threeprime}++;
-
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                my $new = "intergenic.threeprimeprime";
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                #my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
             }
             elsif ( $g2l < 0 and $g2r > 0 ) {
               $features{promoter}++;
               $strains{$source}{insert_feature}{promoter}++;
               $inserts{$insert_type}{promoter}++;
-
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                my $new = "intergenic.promoter";
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                #my $new = "intergenic.threeprimeprime";
+                my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
             }
             elsif ( ( $g2l == 0 and $g2r > 0 ) or ( $g2l < 0 and $g2r == 0 ) ) {
               if ( ( $g2l == 0 and $dfe <= $promoter_cut_off )
@@ -324,11 +348,15 @@ foreach my $source ( sort keys %sources ) {
                 $features{promoter}++;
                 $strains{$source}{insert_feature}{promoter}++;
                 $inserts{$insert_type}{promoter}++;
-
-                my $new = "intergenic.promoter";
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                #my $new = "intergenic.threeprimeprime";
+                my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
               }
             }
             elsif ( ( $g2l == 0 and $g2r < 0 ) or ( $g2r == 0 and $g2l > 0 ) ) {
@@ -338,11 +366,15 @@ foreach my $source ( sort keys %sources ) {
                 $features{threeprime}++;
                 $strains{$source}{insert_feature}{threeprime}++;
                 $inserts{$insert_type}{threeprime}++;
-
-                my $tmp = $each{$ref}{$start}{$insert_feature};
-                my $new = "intergenic.threeprimeprime";
-                $each{$ref}{$start}{$new} = $tmp;
                 delete $each{$ref}{$start}{$insert_feature};
+                my $new = "intergenic.threeprimeprime";
+                #my $new = "intergenic.promoter";
+                $each{$ref}{$start}{$new}{insert_type}=$insert_type;
+                $each{$ref}{$start}{$new}{dfs} = $dfs;
+                $each{$ref}{$start}{$new}{dfe} = $dfe;
+                $each{$ref}{$start}{$new}{source} = $source;
+                $each{$ref}{$start}{$new}{gene2right} = $g2r;
+                $each{$ref}{$start}{$new}{gene2left} = $g2l;
               }
             }
           }

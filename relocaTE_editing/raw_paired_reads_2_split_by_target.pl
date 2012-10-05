@@ -3,10 +3,13 @@ use strict;
 use File::Spec;
 use Getopt::Long;
 use File::Basename;
-
+use FindBin qw($RealBin);
 ## trims and filters reads, aligns to genome, splits by target.
 ## produces fq, sam and bam files for each individual target
-my $scripts_dir = '/home_stajichlab/robb/bin';
+my $scripts_dir = $RealBin;
+my $current     = File::Spec->curdir();
+my $current_dir = File::Spec->rel2abs($current);
+
 my $dir = '.';
 my $genomeFasta;
 my ( $minLength, $minQuality, $minPercent ) = ( 50, 20, 80 );
@@ -14,21 +17,15 @@ my $Q             = 33;
 my $insertLength  = 500;
 my $mate_1_id     = "_p1";
 my $mate_2_id     = "_p2";
-#my $unpaired_id   = ".unPaired";
 my $split         = 0;
 my $filter_trim   = 1;
-my $tempDir       = "/scratch";
+my $tempDir       = $current_dir;
 my $bin_per_chrom = 1;
-
-#my $tempDir = "/dev/shm";
-#my $start_host = `hostname`;
-#$start_host =~ s/\s+//g;
 
 GetOptions(
   'd|dir:s'           => \$dir,
   '1|mate_1_id:s'     => \$mate_1_id,
   '2|mate_2_id:s'     => \$mate_2_id,
-#  'u|unpaired_id:s'   => \$unpaired_id,
   'g|genomeFasta:s'   => \$genomeFasta,
   'l|minLength:i'     => \$minLength,
   'q|minQuality:i'    => \$minQuality,
@@ -47,7 +44,7 @@ if ( !defined $genomeFasta ) {
   &getHelp();
 }
 
-sub getHelp () {
+sub getHelp {
   print "
 usage:
 ./raw_paired_reads_2_split_by_target.pl [-d fq_file_directory] [-1 mate_pair_file_1_id][-2 mate_pair_file_2_id][-l minLength] [-q minQuality] [-p minPercent] [-s quality_offset] [-i insert_size] [-h] 
@@ -60,8 +57,8 @@ options:
 -p INT		min percent for fastq_quality_filter [80]
 -s INT		quality score offset type Sanger(33) or Illumina(64) [33]
 -i INT		insert library length [500]
--1 STR		file containing mate 1 seqs id (ex reads_1.fq) [_p1]
--2 STR		file containing mate 2 seqs id (ex reads_2.fq) [_p2]
+-1 STR		file containing mate 1 id (ex reads_1.fq) [_p1]
+-2 STR		file containing mate 2 id (ex reads_2.fq) [_p2]
 -b INT	        split the sam and bam files and organize by chromosome yes=1 no=0 [1]	
 -x INT	        split fq file into smaller files (1,000,000/file) yes=1 no=0 [0]	
 -f INT	        run fastq_quality_filter and fastq_quality_trimmer yes=1 no=0 [1]	
@@ -74,8 +71,7 @@ options:
 
 my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst ) =
   localtime(time);
-$year += 1900
-  ; ## $year contains no. of years since 1900, to add 1900 to make Y2K compliant
+$year += 1900;
 my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
 
 my $date = "$year-$abbr[$mon]-$mday";    ## gives 2012-Dec-17
@@ -83,12 +79,9 @@ my $date = "$year-$abbr[$mon]-$mday";    ## gives 2012-Dec-17
 unless ( -e $genomeFasta ) {
   print "$genomeFasta does not exist. Check file name.\n";
   &getHelp();
-  #die "$genomeFasta does not exist. Check file name.\n";
 }
 
 my $genome_path = File::Spec->rel2abs($genomeFasta);
-my $current     = File::Spec->curdir();
-my $current_dir = File::Spec->rel2abs($current);
 my $log_file    = "$current_dir/$date-log.txt";
 `touch $log_file`;
 my $bwa_index = "bwa index -a bwtsw $genome_path";
@@ -104,29 +97,30 @@ my $dir_path = File::Spec->rel2abs($dir);
 ##check to make sure that files can be found with the mate patterns provided
 my $mate_1_path = "$dir_path/*$mate_1_id.f*q";
 my $mate_2_path = "$dir_path/*$mate_2_id.f*q";
-#my $unpaired_path = "$dir_path/*$unpaired_id.f*q";
-my @filelist_1 = < $mate_1_path >;
-my @filelist_2 = < $mate_2_path >;
-#my @filelist_unpaired = < $unpaired_path >;
-if (!@filelist_1){
-  print "Cannot find any files in $dir_path that are similar to your mate_file_1 pattern $mate_1_id\n";
+my @filelist_1  = < $mate_1_path >;
+my @filelist_2  = < $mate_2_path >;
+if ( !@filelist_1 ) {
+  print
+"Cannot find any files in $dir_path that are similar to your mate_file_1 pattern $mate_1_id\n";
   &getHelp();
 }
-if (!@filelist_2){
-  print "Cannot find any files in $dir_path that are similar to your mate_file_1 pattern $mate_2_id\n";
+if ( !@filelist_2 ) {
+  print
+"Cannot find any files in $dir_path that are similar to your mate_file_1 pattern $mate_2_id\n";
   &getHelp();
 }
 
 my %files;
 ##split into smaller files
 if ($split) {
-  mkdir "$current_dir/split_by_number_fq" unless -d "$current_dir/split_by_number_fq";
+  mkdir "$current_dir/split_by_number_fq"
+    unless -d "$current_dir/split_by_number_fq";
   opendir( DIR, $dir_path ) || die "$!";
   foreach my $file ( readdir(DIR) ) {
     my ( $volume, $directories, $filename ) = File::Spec->splitpath($file);
     next unless ( $filename =~ /((\S+)($mate_1_id|$mate_2_id))\.(fastq|fq)$/ );
     my ( $filename_base, $sampleName, $pairID, $suffix ) = ( $1, $2, $3, $4 );
-    `$scripts_dir/fastq_split.pl -s 1000000 -o split_by_number_fq/ $dir_path/$file`;
+`$scripts_dir/fastq_split.pl -s 1000000 -o split_by_number_fq/ $dir_path/$file`;
   }
 }
 if ($split) {
@@ -136,19 +130,10 @@ opendir( DIR, $dir_path ) || die "Can't Open $dir_path $!";
 my $fq_ext;
 foreach my $file ( readdir(DIR) ) {
   my ( $volume, $directories, $filename ) = File::Spec->splitpath($file);
-  #next unless ( $filename =~ /((\S+)($mate_1_id|$mate_2_id))\.(fastq|fq)$/ );
-  if( $filename =~ /((\S+)($mate_1_id|$mate_2_id))\.(fastq|fq)$/){
-    my ( $filename_base, $sampleName, $pairID, $suffix ) = ( $1, $2, $3, $4 );
-    push @${ $files{$sampleName} }, $filename_base;
-    $fq_ext = $suffix;
-  }#elsif( $filename =~ /((\S+)\.?(unpaired))\.(fastq|fq)/i ){
-   # my ( $filename_base, $sampleName, $pairID, $suffix ) = ( $1, $2, $3, $4 );
-   # push @${ $files{$sampleName} }, $filename_base;
-   # $fq_ext = $suffix;
-  #}
-  else{
-    next;
-  }
+  next unless ( $filename =~ /((\S+)($mate_1_id|$mate_2_id))\.(fastq|fq)$/ );
+  my ( $filename_base, $sampleName, $pairID, $suffix ) = ( $1, $2, $3, $4 );
+  push @${ $files{$sampleName} }, $filename_base;
+  $fq_ext = $suffix;
 }
 
 my $desc;
@@ -285,11 +270,16 @@ foreach my $sample ( sort keys %files ) {
 "if [ ! -d \"$current_dir/bam_for_all_reads\" ] ; then mkdir -m 0775 $current_dir/bam_for_all_reads ; fi\n";
   print OUTFILE
 "echo \"$sample start cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads \"\n";
-  print OUTFILE "cp \$tmp_dir/$sample.sa* $current_dir/sam_for_all_reads\n";
-  print OUTFILE "if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then cp \$tmp_dir/$sample.unPaired.sa* $current_dir/sam_for_all_reads\n ; fi\n";
-
+  print OUTFILE "cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads\n";
   print OUTFILE
 "echo \"$sample end cp \$tmp_dir/$sample.sam $current_dir/sam_for_all_reads \"\n";
+
+print OUTFILE "if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then 
+samtools view -h -b -S -T $genome_path \$tmp_dir/$sample.unPaired.sam >  \$tmp_dir/$sample.unPaired.bam
+samtools sort  \$tmp_dir/$sample.unPaired.bam  \$tmp_dir/$sample.unPaired.sorted
+samtools index  \$tmp_dir/$sample.unPaired.sorted.bam
+cp \$tmp_dir/$sample.unPaired.sorted.bam* $current_dir/bam_for_all_reads/. ; fi \n";
+
   print OUTFILE
 "if [ -f \"\$tmp_dir/$sample.sam\" ] && [ ! -f \"$current_dir/sam_for_all_reads/$sample.sam\" ] ; then echo \" $sample.sam did not copy to $current_dir/sam_for_all_reads\" ; fi\n";
   print OUTFILE
@@ -298,7 +288,6 @@ foreach my $sample ( sort keys %files ) {
   print OUTFILE "echo \"$sample samtools:view\"\n";
   print OUTFILE
 "samtools view -h -b -S -T $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
-#"samtools view -b -S -h -T $genome_path \$tmp_dir/$sample.sam >  \$tmp_dir/$sample.bam\n";
   print OUTFILE "echo \"$sample samtools:sort\"\n";
   print OUTFILE
     "samtools sort  \$tmp_dir/$sample.bam  \$tmp_dir/$sample.sorted\n";
@@ -311,15 +300,6 @@ foreach my $sample ( sort keys %files ) {
     "cp \$tmp_dir/$sample.sorted.bam* $current_dir/bam_for_all_reads/.\n";
   print OUTFILE
 "echo \"$sample end cp \$tmp_dir/$sample.sorted.bam $current_dir/bam_for_all_reads \"\n";
-
-   print OUTFILE "if [ -e \$tmp_dir/$sample.unPaired.sam ] ; then 
-samtools view -h -b -S -T $genome_path \$tmp_dir/$sample.unPaired.sam >  \$tmp_dir/$sample.unPaired.bam
-samtools sort  \$tmp_dir/$sample.unPaired.bam  \$tmp_dir/$sample.unPaired.sorted
-samtools index  \$tmp_dir/$sample.unPaired.sorted.bam
-cp \$tmp_dir/$sample.unPaired.sorted.bam* $current_dir/bam_for_all_reads/. \n";
-
- 
-
   print OUTFILE
 "if [ -f \$tmp_dir/$sample.sorted.bam ] && [ ! -f $current_dir/bam_for_all_reads/$sample.sorted.bam ] ; then echo \" $sample.sorted.bam did not copy to $current_dir/bam_for_all_reads\" ; fi\n";
 
@@ -340,11 +320,10 @@ cp \$tmp_dir/$sample.unPaired.sorted.bam* $current_dir/bam_for_all_reads/. \n";
 "for i in `ls \$tmp_dir/split_by_target` ; do mkdir -m 0775 -p $current_dir/bam_split_by_chromosome/\$i ; done\n";
     print OUTFILE
 "for i in `ls \$tmp_dir/split_by_target` ; do $scripts_dir/move_files.pl \$tmp_dir/split_by_target/\$i $current_dir; done\n";
+
   }
   print OUTFILE "cd $current_dir\n";
 
-#print OUTFILE "host_remote=`hostname`\n";
-#print OUTFILE "if [ $start_host = \$host_remote ]; then cd $current_dir; rm -rf \$tmp_dir; else ssh \$host_remote \"rm -rf \$tmp_dir\"; fi\n";
   print OUTFILE "rm -rf \$tmp_dir\n";
   print OUTFILE "echo \"$sample end_of_commands\" >> $log_file\n";
 }

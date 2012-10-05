@@ -3,74 +3,103 @@ use strict;
 
 
 my $file = shift;
-##>primersetName
-##PRIMERSEQ1nnnnnnnnnnnnPRIMERSEQ2
-
-`blastall -p blastn -i $file -d  ~/Wessler-Rice/Genome/index/MSU_r7.all.fa -o primer.blastout -m8`;
-
+my $db = shift;
 
 my %primers;
-my $last = '';
+
+if (!defined $file){
+  die "please provide a fasta file of primers in the following format:
+primersetName PRIMER_foward PRIMER_rev
+primersetName PRIMER_foward PRIMER_rev
+primersetName PRIMER_foward PRIMER_rev
+";
+}
+
+if (!defined $db){
+  die "please provide a fasta to use as a db
+
+";
+}
+open IN , $file or die "Can't open $file $!";
+open OUT , ">$file.fa" or die "Can't open $file.fa for writting $!";
+
+while (my $line = <IN>){
+  my ($id , $primer1,$primer2 ) = split /\s+/ , $line;
+  $primers{$id}{p1}{seq}=$primer1;
+  $primers{$id}{p2}{seq}=$primer2;
+  $primers{$id}{p1}{len}=length ($primer1);
+  $primers{$id}{p2}{len}=length ($primer2);
+  my $seq_for_blast = $primer1 . "NNNNNNNNNN" . $primer2;
+  
+ print OUT ">$id\n$seq_for_blast\n";
+
+}
+
+
+`blastall -F F -p blastn -i $file.fa -d $db -o $file.blastout -m8` if !-e "$file.blastout";
+
+
 my $count;
-open BLASTOUT, "primer.blastout" or die "Can't open primer.blastout";
+open BLASTOUT, "$file.blastout" or die "Can't open $file.blastout";
 #1	Chr11	100.00	21	0	0	45	65	21964649	21964629	0.004	42.1
 #1	Chr11	100.00	16	0	0	1	16	21963880	21963895	3.6	32.2
 while ( my $line = <BLASTOUT> ) {
+  $count++;
   chomp $line;
   my (
     $primer_pair, $subject,     $perId,  $alignLen,
     $mm,          $gapOpenings, $qStart, $qEnd,
     $sStart,      $sEnd,        $e,      $score
   ) = split /\t/, $line;
-  if ( $primer_pair ne $last ) {
-    $count = 0;
-  }
-  else {
-    $count++;
-  }
-  $primers{$primer_pair}{$count}{sub}    = $subject;
-  $primers{$primer_pair}{$count}{alnLen} = $alignLen;
-  $primers{$primer_pair}{$count}{mm}     = $mm;
-  $primers{$primer_pair}{$count}{perID}  = $perId;
-  $primers{$primer_pair}{$count}{qStart} = $qStart;
-  $primers{$primer_pair}{$count}{qEnd}   = $qEnd;
-  $primers{$primer_pair}{$count}{sStart} = $sStart;
-  $primers{$primer_pair}{$count}{sEnd}   = $sEnd;
-  $primers{$primer_pair}{$count}{e}      = $e;
-  $primers{$primer_pair}{$count}{line}   = $line;
-  $last                                  = $primer_pair;
+  my $p1_len = $primers{$primer_pair}{p1}{len};
+  my $p2_len = $primers{$primer_pair}{p2}{len};
+  next if  (($alignLen != $p1_len) and ($alignLen != $p2_len));
+  next if  ($perId != 100);
+  #$primers{$primer_pair}{blast}{$count}{sub}    = $subject;
+  $primers{$primer_pair}{blast}{$count}{$subject}{alnLen} = $alignLen;
+  $primers{$primer_pair}{blast}{$count}{$subject}{mm}     = $mm;
+  $primers{$primer_pair}{blast}{$count}{$subject}{perID}  = $perId;
+  $primers{$primer_pair}{blast}{$count}{$subject}{qStart} = $qStart;
+  $primers{$primer_pair}{blast}{$count}{$subject}{qEnd}   = $qEnd;
+  $primers{$primer_pair}{blast}{$count}{$subject}{sStart} = $sStart;
+  $primers{$primer_pair}{blast}{$count}{$subject}{sEnd}   = $sEnd;
+  $primers{$primer_pair}{blast}{$count}{$subject}{e}      = $e;
+  $primers{$primer_pair}{blast}{$count}{$subject}{line}   = $line;
+  $primers{$primer_pair}{subject}{$subject}=1;
+  
 }
 my %warn;
-my %product_size;
+  print "primer_set\tproductSize\thit:start..end\tin_range\tprimer1\tprimer2\n";
 foreach my $primer_set ( keys %primers ) {
-  my $count = scalar keys %{ $primers{$primer_set} };
-  if ( $count < 2 ) {
-    push @{ $warn{$primer_set} } , 'only 1 primer mapped';
-  }
-  elsif ( $count > 2 ) {
-    push @{ $warn{$primer_set} } ,
-      'more than 1 hit for one or more of your primers in this set';
-  }
-  elsif ( $count == 2 ) {
-    my $sub_1 = '';
-    my @values;
-    foreach my $count ( keys %{ $primers{$primer_set} } ) {
-      my $sub = $primers{$primer_set}{$count}{sub};
-      if ( $sub_1 eq '' ) {
-        $sub_1 = $sub;
-        push @values, $primers{$primer_set}{$count}{sStart} , $primers{$primer_set}{$count}{sEnd};
-      }
-      elsif ( $sub eq $sub_1 ) {
-        push @values, $primers{$primer_set}{$count}{sStart} , $primers{$primer_set}{$count}{sEnd};
-      }
+  #my @subjects = keys %{$primers{$primer_set}{subject}};
+  #next if @subjects > 1;
+  my %hits;
+  my @values;
+  my @lines;
+  foreach my $count (keys %{$primers{$primer_set}{blast}}){
+    foreach my $sub (keys %{$primers{$primer_set}{blast}{$count}}){
+      push @{ $hits{$sub}} , $primers{$primer_set}{blast}{$count}{$sub}{sStart} , $primers{$primer_set}{blast}{$count}{$sub}{sEnd};
     }
-    my @sorted_values = sort {$a <=> $b} @values;
+  }
+  my $loc = 0;
+  if ($primer_set =~ /\D+(\d{3,})/){
+    $loc = $1;
+  }
+  foreach my $sub (keys %hits){
+    my @sorted_values = sort {$a <=> $b} @{$hits{$sub}};
+    next if @sorted_values < 4; #2 starts, 2 ends
     my $smallest = shift @sorted_values;
     my $largest = pop @sorted_values;
-    if (!exists $warn{$primer_set}){
-      print "$primer_set\t",$largest-$smallest+1,"\n";
+    my $p1 = uc $primers{$primer_set}{p1}{seq};
+    my $p2 = uc $primers{$primer_set}{p2}{seq};
+    my $product_size = $largest-$smallest+1;
+    my $in_range = 'N/A';
+    if (defined $loc and $loc > $smallest and $loc < $largest){
+      $in_range = 'yes';
     }else{
-      print "$primer_set\t",join (",",@{$warn{$primer_set}}),"\n"; 
+      $in_range = 'no';
     }
+    print "$primer_set\t$product_size\t$sub:$smallest..$largest\t$in_range\t$p1\t$p2\n" if $product_size < 10000 and $product_size > 100;
+    #print "$primer_set\t",$largest-$smallest+1,"\t$subjects[0]:$smallest..$largest\t$p1\t$p2\n";
   }
 }

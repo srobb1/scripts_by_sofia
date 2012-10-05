@@ -1,0 +1,76 @@
+#!/usr/bin/perl -w
+use strict;
+use Bio::DB::Fasta;
+
+my $excision_out = shift;
+my $in_fa        = shift;
+my $padding      = shift;
+
+my $dbfile = "$in_fa";
+my $db_obj = Bio::DB::Fasta->new($dbfile);
+
+open EX, $excision_out or die "Can't open $excision_out";
+while ( my $line = <EX> ) {
+
+#Chr7.1788060    Chr7    1788052 .       TC      T       17.3    .       INDEL;DP=2;AF1=1;CI95=0.5,1;DP4=0,0,2,0;MQ=55;FQ=-40.5  GT:PL:GQ        1/1:56,6,0:10
+  chomp $line;
+  my ( $insertion, $chr, $pos, $three, $ref_seq, $INDEL, $six, $seven, $info ) =
+    split /\t/, $line;
+  my ($DP) = $info =~ /DP=(\d+)/;
+  $DP = defined $DP ? $DP : 'N/A';
+  my ( $ref, $insert_pos ) = $insertion =~ /(\S+)\.(\d+)/;
+  my $start = $insert_pos - 5;
+  my $end   = $insert_pos + 5;
+  my %indel;
+  my @ref_seq   = split '', $ref_seq;
+  my @indel_seq = split '', $INDEL;
+  my $seq_obj   = $db_obj->get_Seq_by_id($ref);
+
+  if ($seq_obj) {
+    my $seq = $seq_obj->seq;
+    if ( defined $seq ) {
+      my $subseq = substr $seq, $start-1, 11;
+      my @subseq = split '',    $subseq;
+      my $i      = $pos;
+      foreach my $nt (@ref_seq) {
+        $indel{ref}{$i} = $nt;
+        $i++;
+      }
+      $i = $pos;
+      foreach my $nt (@indel_seq) {
+        $indel{indel}{$i} = $nt;
+        $i++;
+      }
+      $i = $start;
+      foreach my $nt (@subseq) {
+        $indel{insert}{$i} = $nt;
+        $i++;
+      }
+      print "\n$insertion";
+      print "\t$ref:$start..$end\t" , join( '', @subseq ), "\n";
+      print "\tvcf_ref:\t";
+      foreach my $i ( sort {$a <=> $b} keys %{ $indel{insert} } ) {
+        if ( exists $indel{ref}{$i} ) {
+          my $nt = $indel{ref}{$i};
+          print "$nt";
+        }
+        else {
+          print ".";
+        }
+      }
+      print "\n\tvcf_indel(DP=$DP):\t";
+      foreach my $i (  sort {$a <=> $b}  keys %{ $indel{insert} } ) {
+        if ( exists $indel{indel}{$i} ) {
+          my $nt = $indel{indel}{$i};
+          print "$nt";
+        }
+        else {
+          print ".";
+        }
+      }
+    }
+    else {
+      warn("Cannot find $ref\n");
+    }
+  }
+}
