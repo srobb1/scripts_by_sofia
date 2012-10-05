@@ -14,6 +14,8 @@ rsync -uL ~/bin/process_raw_paired_reads_2_split_by_target/* ~/src/scripts_by_so
 rsync -uL ~/bin/dynGenomClass/* ~/src/scripts_by_sofia/dynGenomClass/.
 rsync -uL ~/bin/relocaTE/* ~/src/scripts_by_sofia/relocaTE/.
 rsync -uL ~/bin/relocaTE_editing/* ~/src/scripts_by_sofia/relocaTE_editing/.
+rsync -uL ~/bin/maize/* ~/src/scripts_by_sofia/maize/.
+rsync -uL ~/bin/SNPs/* ~/src/scripts_by_sofia/SNPs/.
 
 ##TEamRice
 rsync -uL ~/bin/find_mping_insertions/* ~/src/TEamRice/find_mping_insertions/.
