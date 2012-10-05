@@ -16,7 +16,7 @@ rsync -uL ~/bin/relocaTE/* ~/src/scripts_by_sofia/relocaTE/.
 rsync -uL ~/bin/relocaTE_editing/* ~/src/scripts_by_sofia/relocaTE_editing/.
 rsync -uL ~/bin/maize/* ~/src/scripts_by_sofia/maize/.
 rsync -uL ~/bin/SNPs/* ~/src/scripts_by_sofia/SNPs/.
-rsync -uL ~/bin/pong/* ~/src/scripts_by_sofia/SNPs/.
+rsync -uL ~/bin/pong/* ~/src/scripts_by_sofia/pong/.
 
 ##TEamRice
 rsync -uL ~/bin/find_mping_insertions/* ~/src/TEamRice/find_mping_insertions/.
