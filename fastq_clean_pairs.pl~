@@ -89,10 +89,7 @@ while (my $right_header = <RIGHT>) {
 }
 close RIGHT;
 
-open (LEFT, $file_1) or die "cannot open $file_1:$!\n";
-#open (LEFT, $ARGV[0]) or die "cannot open file:$!\n";
-
-
+open (LEFT, $ARGV[0]) or die "cannot open file:$!\n";
 
 while (my $left_header = <LEFT>) {
        my $left_seq = <LEFT>;

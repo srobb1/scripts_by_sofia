@@ -1,10 +1,17 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Spec;
-my $dir       = shift or die "dir genomefile strain specification\n";
+my $dir       = shift;
 my $genome    = shift;
 my $strain    = shift;
 my $specification = shift;
+
+if (!defined $dir or !defined $genome or !defined $strain or !defined $specification){
+  die "gatk_realign.pl dir_of_bamfiles path_2_genome strain strain_specificatio
+ex gatk_realign.pl ~/rice/SNPs/A123_0 ~/Wessler-Rice/Genome/index/MSUr7.all.fa A123 A123_0
+"
+}
+
 my $center = 'UCR';
 my $type ='Genomic';
 my $platform  = 'illumina';

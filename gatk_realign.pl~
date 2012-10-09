@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 use File::Spec;
-my $dir       = shift;
+my $dir       = shift or die "dir genomefile strain specification\n";
 my $genome    = shift;
 my $strain    = shift;
 my $specification = shift;
