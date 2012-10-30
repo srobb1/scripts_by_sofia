@@ -169,7 +169,7 @@ foreach my $feature (@features_type) {
           $f_name = $1;
         }else {
           $gene2right=~ /^(\w+)\:/;
-          $f_name = $1;
+          $f_name = $gene2right;
         }
 
         $each{$ref}{$start}{$type}{f_name}=$f_name; 

@@ -164,6 +164,15 @@ foreach my $feature (@features_type) {
       $each{$ref}{$start}{$type}{feat_len}=$f_len;
       $each{$ref}{$start}{$type}{insert_type}=$insert_type;
       if ($type eq 'intergenic'){
+        if ($distance_from_start < $distance_from_end){
+          $gene2left =~ /^(\w+)\:/;
+          $f_name = $1;
+        }else {
+          $gene2right=~ /^(\w+)\:/;
+          $f_name = $1;
+        }
+
+        $each{$ref}{$start}{$type}{f_name}=$f_name; 
         $each{$ref}{$start}{$type}{gene2right}=$gene2right;
         $each{$ref}{$start}{$type}{gene2left}=$gene2left;
    

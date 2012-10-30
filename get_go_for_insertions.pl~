@@ -49,7 +49,6 @@ while ( my $line = <INFILE> ) {
       }else {
         $insert_feature = 'promoter';
       }
-      $gene = $f_note;
       my $go = get_go($gene);
       print "$ref:$start\t$gene\t$insert_feature\t$insert_type\t$go\n";
       if (defined $go and $go ne ''){
@@ -64,14 +63,13 @@ while ( my $line = <INFILE> ) {
         }
       }
     }
-    elsif ( $dfe < $dfs and $dfe <= 1000 ) {
+    elsif ( $dfe < $dfs and $dfe <= 500 ) {
       $gene = $g2r;
       if ($g2r_strand eq '-'){
         $insert_feature = '3prime';
       }else {
         $insert_feature = 'promoter';
       }
-      $gene = $f_note;
       my $go = get_go($gene);
       print "$ref:$start\t$gene\t$insert_feature\t$insert_type\t$go\n";
       if (defined $go and $go ne ''){
