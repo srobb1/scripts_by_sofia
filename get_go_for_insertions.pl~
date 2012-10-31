@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
 use strict;
+use Data::Dumper;
 
 ##use file from get_insertions_class.pl
 my $file = shift;
@@ -14,20 +15,24 @@ open GO, $GO or die "can't open $GO\n";
 while ( my $line = <GO> ) {
   next if $line =~ /GOSlim_acc/;
   chomp $line;
-  my ( $model, $GOSlim_acc, $GOSlim_name, $aspect ) = split /\s+/, $line;
+  #LOC_Os01g01010.1        GO:0030234      F       enzyme regulator activity       IEA     TAIR:AT3G59570
+  my ( $model, $GOSlim_acc, $aspect, $GOSlim_name) = split /\t/, $line;
   next if $aspect ne 'F';
   next if $GOSlim_acc eq 'GO:0003674';
   $GO{$GOSlim_acc}{model}       = $model;
   $GO{$GOSlim_acc}{GOSlim_name} = $GOSlim_name;
   $GO{$GOSlim_acc}{aspect}      = $aspect;
   my ($gene) = $model =~ /^(\S+)\.\d+/;
+  print $gene, "----\n";
   ${ $GO_genes{$gene} }{$GOSlim_acc} = 1;
 }
+print Dumper \%GO_genes;
 print "insert_pos\tgeneID\tinsert_feature\tinsert_type\tGO\n";
 
 open INFILE, "$file" or die;
 while ( my $line = <INFILE> ) {
   next if $line eq "\n";
+  next if $line =~ /transposon/;
   next if $line =~ /source/;
   chomp $line;
   #A123_0  Chr10   21849910        homozygous      0       21.5    intergenic      21849727        21858749        LOC_Os10g40720:21847804..21849726(-)/LOC_Os10g40730:21858750..21861307(+)     LOC_Os10g40730  n/a
@@ -37,7 +42,7 @@ while ( my $line = <INFILE> ) {
     $f_end,    $f_strand, $f_name,         $f_note
   ) = split /\s+/, $line;
   my $gene = $f_name;
-  if ( $insert_feature eq 'intergenic' ) {
+  if ( $insert_feature =~ /intergenic/  ) {
     my $dfs = $start - $f_start;
     my $dfe = $f_end = $start;
     ##  LOC_Os10g41820:22503433..22510131(-)/LOC_Os10g41829:22511022..22513298(+)
@@ -45,10 +50,11 @@ while ( my $line = <INFILE> ) {
     if ( $dfs < $dfe and $dfs <= 1000 ) {
       $gene = $g2l;
       if ($g2l_strand eq '+'){
-        $insert_feature = '3prime';
+        $insert_feature = '1kb+';
       }else {
         $insert_feature = 'promoter';
       }
+      #$gene = $f_note;
       my $go = get_go($gene);
       print "$ref:$start\t$gene\t$insert_feature\t$insert_type\t$go\n";
       if (defined $go and $go ne ''){
@@ -63,13 +69,14 @@ while ( my $line = <INFILE> ) {
         }
       }
     }
-    elsif ( $dfe < $dfs and $dfe <= 500 ) {
+    elsif ( $dfe < $dfs and $dfe <= 1000 ) {
       $gene = $g2r;
       if ($g2r_strand eq '-'){
         $insert_feature = '3prime';
       }else {
         $insert_feature = 'promoter';
       }
+      #$gene = $f_note;
       my $go = get_go($gene);
       print "$ref:$start\t$gene\t$insert_feature\t$insert_type\t$go\n";
       if (defined $go and $go ne ''){
