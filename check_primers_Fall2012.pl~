@@ -1,0 +1,205 @@
+#!/usr/bin/perl -w
+use strict;
+use Data::Dumper;
+my $file = shift;
+my $db1  = shift;    #TE plus padding
+my $db2  = shift;    #TE only
+
+my %primers;
+
+if ( !defined $file ) {
+  die "please provide a fasta file of primers in the following format:
+TE_id primerDesc PRIMER_foward PRIMER_rev
+TE_id primerDesc PRIMER_foward PRIMER_rev
+TE_id primerDesc PRIMER_foward PRIMER_rev
+";
+}
+
+if ( !defined $db1 ) {
+  die "please provide a fasta to use as a db containing TE plus padding
+";
+}
+if ( !defined $db2 ) {
+  die "please provide a fasta to use as a db of just the TE
+";
+}
+open IN,  $file             or die "Can't open $file $!";
+open OUT, ">$file.flank.fa" or die "Can't open $file.flank.fa for writting $!";
+open OUTFlanktINNER , ">$file.flank_inner.fa" or die "Can't open $file.flank.fa for writting $!";
+open OUTINNER, ">$file.inner.fa"
+  or die "Can't open $file.inner.fa for writting $!";
+
+while ( my $line = <IN> ) {
+  chomp $line;
+  my ( $student_name, $id, $desc, $primer1, $primer2 ) = split /\t/, $line;
+  if ( $desc eq 'Flank' ) {
+    $primers{$id}{p1}{seq} = $primer1;
+    $primers{$id}{p2}{seq} = $primer2;
+    $primers{$id}{p1}{len} = length($primer1);
+    $primers{$id}{p2}{len} = length($primer2);
+    my $seq_for_blast = $primer1 . "NNNNNNNNNN" . $primer2;
+
+    print OUT ">$id\t$desc\n$seq_for_blast\n";
+  }
+  elsif ( $desc eq 'Inner' ) {
+    $primers{$id}{p3}{seq} = $primer2;
+    $primers{$id}{p3}{len} = length($primer2);
+    my $seq_for_blast = $primer1 . "NNNNNNNNNN" . $primer2;
+
+    print OUTINNER ">$id\t$desc\n$primer2\n";
+    print OUTFlanktINNER ">$id\t$desc\n$seq_for_blast\n";
+  }
+}
+`blastall -F F -p blastn -i $file.flank.fa -d $db1 -o $file.flank.blastout -m8`;
+`blastall -F F -p blastn -i $file.inner.fa -d $db2 -o $file.inner.blastout -m8`;
+`blastall -F F -p blastn -i $file.flank_inner.fa -d $db1 -o $file.flank_inner.blastout -m8`;
+
+open BLASTOUT, "$file.flank.blastout" or die "Can't open $file.flank.blastout";
+#14|TE   Flank   2838|ZM_hAT_noncoding_5|padding|400|te|chr9:136082011..136082378|pcr|chr9:136081611..136082778  100.00  20      0       0       1       20      472     491     9e-05   40.1
+
+while ( my $line = <BLASTOUT> ) {
+  chomp $line;
+  my (
+    $primer_pair, $desc,$subject,     $perId,  $alignLen,
+    $mm,          $gapOpenings, $qStart, $qEnd,
+    $sStart,      $sEnd,        $e,      $score
+  ) = split /\t/, $line;
+  $subject =~ s/^(\d+\|.+?)\|padding.+/$1/;
+  my $p1_len = $primers{$primer_pair}{p1}{len};
+  my $p2_len = $primers{$primer_pair}{p2}{len};
+  next if ( ( $alignLen != $p1_len ) and ( $alignLen != $p2_len ) );
+  next if ( $perId != 100 );
+  if ( $sStart > $sEnd ) {
+    ( $sStart, $sEnd ) = ( $sEnd, $sStart );
+  }
+  if ( exists $primers{$primer_pair}{blast}{$subject} ) {
+    my $stored_start = $primers{$primer_pair}{blast}{$subject}{sStart};
+    my $stored_end   = $primers{$primer_pair}{blast}{$subject}{sEnd};
+    if ( $sStart < $stored_start ) {
+      $primers{$primer_pair}{blast}{$subject}{sStart} = $sStart;
+    }
+    if ( $sEnd > $stored_end ) {
+      $primers{$primer_pair}{blast}{$subject}{sEnd} = $sEnd;
+    }
+  }
+  else {
+    $primers{$primer_pair}{blast}{$subject}{sStart} = $sStart;
+    $primers{$primer_pair}{blast}{$subject}{sEnd}   = $sEnd;
+  }
+
+  $primers{$primer_pair}{blast}{$subject}{count}++;
+  $primers{$primer_pair}{blast}{$subject}{alnLen} = $alignLen;
+  $primers{$primer_pair}{blast}{$subject}{mm}     = $mm;
+  $primers{$primer_pair}{blast}{$subject}{perID}  = $perId;
+  $primers{$primer_pair}{blast}{$subject}{e}      = $e;
+  $primers{$primer_pair}{blast}{$subject}{line}   = $line;
+  $primers{$primer_pair}{subject}{$subject}       = 1;
+  $primers{$primer_pair}{inner}{$subject}{inner} = 0 ;
+
+}
+
+
+open BLASTOUT_flank_inner, "$file.flank_inner.blastout" or die "Can't open $file.flank_inner.blastout";
+
+while ( my $line = <BLASTOUT_flank_inner> ) {
+  chomp $line;
+  my (
+    $primer_pair, $desc,$subject,     $perId,  $alignLen,
+    $mm,          $gapOpenings, $qStart, $qEnd,
+    $sStart,      $sEnd,        $e,      $score
+  ) = split /\t/, $line;
+  $subject =~ s/^(\d+\|.+?)\|padding.+/$1/;
+  my $p1_len = $primers{$primer_pair}{p1}{len};
+  my $p2_len = $primers{$primer_pair}{p2}{len};
+  next if ( ( $alignLen != $p1_len ) and ( $alignLen != $p2_len ) );
+  next if ( $perId != 100 );
+  if ( $sStart > $sEnd ) {
+    ( $sStart, $sEnd ) = ( $sEnd, $sStart );
+  }
+  if ( exists $primers{$primer_pair}{inner}{$subject}{sStart} ) {
+    my $stored_start = $primers{$primer_pair}{inner}{$subject}{sStart};
+    my $stored_end   = $primers{$primer_pair}{inner}{$subject}{sEnd};
+    if ( $sStart < $stored_start ) {
+      $primers{$primer_pair}{inner}{$subject}{sStart} = $sStart;
+    }
+    if ( $sEnd > $stored_end ) {
+      $primers{$primer_pair}{inner}{$subject}{sEnd} = $sEnd;
+    }
+  }
+  else {
+    $primers{$primer_pair}{inner}{$subject}{sStart} = $sStart;
+    $primers{$primer_pair}{inner}{$subject}{sEnd}   = $sEnd;
+  }
+
+  $primers{$primer_pair}{inner}{$subject}{count}++;
+  $primers{$primer_pair}{inner}{$subject}{alnLen} = $alignLen;
+  $primers{$primer_pair}{inner}{$subject}{mm}     = $mm;
+  $primers{$primer_pair}{inner}{$subject}{perID}  = $perId;
+  $primers{$primer_pair}{inner}{$subject}{e}      = $e;
+  $primers{$primer_pair}{inner}{$subject}{line}   = $line;
+
+}
+
+
+open BLASTOUT_inner, "$file.inner.blastout"
+  or die "Can't open $file.inner.blastout";
+
+#14|TE   Inner   2834|ZM_hAT_noncoding_5|methyl|chr8:29147579..29147766|complete|chr8:29147384..29147766 100.00  20      0       0       1       20      250     231     5e-06   40.1
+while ( my $line = <BLASTOUT_inner> ) {
+  chomp $line;
+  my (
+    $primer_pair, $desc, $subject,     $perId,  $alignLen,
+    $mm,          $gapOpenings, $qStart, $qEnd,
+    $sStart,      $sEnd,        $e,      $score
+  ) = split /\t/, $line;
+  $subject =~ s/^(\d+\|.+?)\|methy.+/$1/;
+  my $p3_len = $primers{$primer_pair}{p3}{len};
+  next if ( $alignLen != $p3_len );
+  next if ( $perId != 100 );
+  if (exists $primers{$primer_pair}{blast}{$subject}){
+    #does the 3rd primer fall match to the same TE
+    $primers{$primer_pair}{inner}{$subject}{inner} =1 ;
+      print "it exists!!!!!!!!!\n";
+    }
+  }
+print Dumper \%primers;
+
+print
+"primer_set\thit\tflank_product_size\tinner_product_size\tcorrect_hit\tcorrect_inner\tp1\tp2\tp3\n";
+foreach my $primer_set ( keys %primers ) {
+  foreach my $sub ( keys %{ $primers{$primer_set}{blast} } ) {
+    my %hits;
+    my @values;
+    my @lines;
+    my $loc             = $primer_set =~ /^(\d+)/;
+    my $correct_matches = 'yes';
+    my $correct_inner   = 'yes';
+    my $count = $primers{$primer_set}{blast}{$sub}{count};
+    if ( $count != 2) {    #2 primer hits
+      $correct_matches = 'no';
+    }
+    if ( $primers{$primer_set}{inner}{$sub} == 0 )
+    {    #1=correct position, 0=incorrect position
+      $correct_inner = 'no';
+    }
+    my $flank_start = $primers{$primer_set}{blast}{$sub}{sStart};
+    my $flank_end   = $primers{$primer_set}{blast}{$sub}{sEnd};
+    my $inner_end   = $primers{$primer_set}{inner}{$sub}{sEnd};
+    my $p1          = uc $primers{$primer_set}{p1}{seq};
+    my $p2          = uc $primers{$primer_set}{p2}{seq};
+    my $p3          = uc $primers{$primer_set}{p3}{seq};
+    my $flank_product_size =
+      $correct_matches eq 'yes' ? $flank_end - $flank_start + 1 : 'N/A';
+    my $inner_product_size =
+      $correct_inner eq 'yes' ? $inner_end - $flank_start + 1 : 'N/A';
+    my $in_range = 'no';
+    my $actual_loc = $sub =~ /^(\d+)/;
+
+    if ( $loc eq $actual_loc ) {
+      $in_range = 'yes';
+    }
+    print
+"$primer_set\t$sub\t$flank_product_size\t$inner_product_size\t$in_range\t$correct_inner\t$p1\t$p2\t$p3\n" if $correct_matches eq 'yes';
+
+  }
+}
