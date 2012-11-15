@@ -1,0 +1,8 @@
+vcf=$1
+base=$2
+genome_repeat=$3
+
+grep ^# $vcf > file_noRepeats.vcf
+subtractBed -a file_SNPs.raw.vcf -b $genome_repeat >> file_noRepeats.vcf
+perl -pi -e 's/\t$//' file_noRepeats.vcf
+mv file_noRepeats.vcf
