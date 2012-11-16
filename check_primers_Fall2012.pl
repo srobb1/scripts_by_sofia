@@ -1,17 +1,16 @@
-#i!/usr/bin/perl -w
+#!/usr/bin/perl -w
 use strict;
 use Data::Dumper;
 my $file = shift;
 my $db1  = shift;    #TE plus padding
 my $db2  = shift;    #TE only
-
+my %students;
 my %primers;
-
 if ( !defined $file ) {
   die "please provide a fasta file of primers in the following format:
-TE_id primerDesc PRIMER_foward PRIMER_rev
-TE_id primerDesc PRIMER_foward PRIMER_rev
-TE_id primerDesc PRIMER_foward PRIMER_rev
+ClassSection Student_name TE_id primerDesc PRIMER_foward PRIMER_rev
+ClassSection Student_name TE_id primerDesc PRIMER_foward PRIMER_rev
+ClassSection Student_name TE_id primerDesc PRIMER_foward PRIMER_rev
 ";
 }
 
@@ -31,14 +30,16 @@ open OUTINNER, ">$file.inner.fa"
 
 while ( my $line = <IN> ) {
   chomp $line;
-  my ( $student_name, $id, $desc, $primer1, $primer2 ) = split /\t/, $line;
+  my ( $timeStamp,  $student_name, $id, $desc, $primer1, $primer2 , $section) = split /\t/, $line;
   if ( $desc eq 'Flank' ) {
     $primers{$id}{p1}{seq} = $primer1;
     $primers{$id}{p2}{seq} = $primer2;
     $primers{$id}{p1}{len} = length($primer1);
     $primers{$id}{p2}{len} = length($primer2);
     my $seq_for_blast = $primer1 . "NNNNNNNNNN" . $primer2;
-
+    $primers{$id}{student}=$student_name;
+    $students{$student_name}=1;
+   
     print OUT ">$id\t$desc\n$seq_for_blast\n";
   }
   elsif ( $desc eq 'Inner' ) {
@@ -163,13 +164,15 @@ while ( my $line = <BLASTOUT_inner> ) {
   }
 
 print
-"primer_set\thit\tflank_product_size\tinner_product_size\tcorrect_hit\tcorrect_inner\tp1\tp2\tp3\n";
+"name\tprimer_set\thit\tflank_product_size\tinner_product_size\tcorrect_hit\tcorrect_inner\tp1\tp2\tp3\n";
+ my $student_count = scalar keys %students;
+my $to_print;
 foreach my $primer_set ( keys %primers ) {
   foreach my $sub ( keys %{ $primers{$primer_set}{blast} } ) {
     my %hits;
     my @values;
     my @lines;
-    my $loc             = $primer_set =~ /^(\d+)/;
+    my ($loc)             = $primer_set =~ /^(\d+)/;
     my $correct_matches = 'yes';
     my $correct_inner   = 'yes';
     my $count = $primers{$primer_set}{blast}{$sub}{count};
@@ -191,13 +194,21 @@ foreach my $primer_set ( keys %primers ) {
     my $inner_product_size =
       $correct_inner eq 'yes' ? $inner_end - $flank_start + 1 : 'N/A';
     my $in_range = 'no';
-    my $actual_loc = $sub =~ /^(\d+)/;
+    my ($actual_loc) = $sub =~ /^(\d+)/;
 
-    if ( $loc eq $actual_loc ) {
+    if ( $loc == $actual_loc ) {
       $in_range = 'yes';
     }
+    my $name = $primers{$primer_set}{student};
     print
-"$primer_set\t$sub\t$flank_product_size\t$inner_product_size\t$in_range\t$correct_inner\t$p1\t$p2\t$p3\n" if $correct_matches eq 'yes';
+"$name\t$primer_set\t$sub\t$flank_product_size\t$inner_product_size\t$in_range\t$correct_inner\t$p1\t$p2\t$p3\n" if $correct_matches eq 'yes';
+
+   if (($correct_matches eq 'yes') and ($in_range  eq 'yes') and ($correct_inner eq 'yes')){
+     my $line = "$name\t$loc" . "_p1\t$p1\n$name\t$loc" . "_p2\t$p2\n$name\t$loc" . "_p3\t$p3\n";
+     $to_print .= $line;
+   }
 
   }
 }
+print "\n\nstudent_count\t$student_count\n";
+print "\n\n$to_print\n";
