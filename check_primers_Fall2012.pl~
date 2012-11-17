@@ -38,7 +38,7 @@ while ( my $line = <IN> ) {
     $primers{$id}{p2}{len} = length($primer2);
     my $seq_for_blast = $primer1 . "NNNNNNNNNN" . $primer2;
     $primers{$id}{student}=$student_name;
-    $students{$student_name}=1;
+    $students{$student_name}=0;
    
     print OUT ">$id\t$desc\n$seq_for_blast\n";
   }
@@ -69,6 +69,7 @@ while ( my $line = <BLASTOUT> ) {
   my $p1_len = $primers{$primer_pair}{p1}{len};
   my $p2_len = $primers{$primer_pair}{p2}{len};
   next if ( ( $alignLen != $p1_len ) and ( $alignLen != $p2_len ) );
+  #next if $mm > 0;
   next if ( $perId != 100 );
   if ( $sStart > $sEnd ) {
     ( $sStart, $sEnd ) = ( $sEnd, $sStart );
@@ -185,7 +186,7 @@ foreach my $primer_set ( keys %primers ) {
     }
     my $flank_start = $primers{$primer_set}{blast}{$sub}{sStart};
     my $flank_end   = $primers{$primer_set}{blast}{$sub}{sEnd};
-    my $inner_end   = $primers{$primer_set}{inner}{$sub}{sEnd};
+    my $inner_end   = exists $primers{$primer_set}{inner}{$sub}{sEnd} ? $primers{$primer_set}{inner}{$sub}{sEnd} : 0 ;
     my $p1          = uc $primers{$primer_set}{p1}{seq};
     my $p2          = uc $primers{$primer_set}{p2}{seq};
     my $p3          = uc $primers{$primer_set}{p3}{seq};
@@ -195,20 +196,35 @@ foreach my $primer_set ( keys %primers ) {
       $correct_inner eq 'yes' ? $inner_end - $flank_start + 1 : 'N/A';
     my $in_range = 'no';
     my ($actual_loc) = $sub =~ /^(\d+)/;
-
+#print Dumper \%primers;
     if ( $loc == $actual_loc ) {
       $in_range = 'yes';
     }
     my $name = $primers{$primer_set}{student};
-    print
-"$name\t$primer_set\t$sub\t$flank_product_size\t$inner_product_size\t$in_range\t$correct_inner\t$p1\t$p2\t$p3\n" if $correct_matches eq 'yes';
+    if ($correct_matches eq 'yes'){
+     print
+"$name\t$primer_set\t$sub\t$flank_product_size\t$inner_product_size\t$in_range\t$correct_inner\t$p1\t$p2\t$p3\n";
+   }elsif ($in_range eq 'yes' and $correct_inner eq 'yes'){
+     print
+"$name\t$primer_set\t$sub\t$flank_product_size\t(incorrectMatchNumber=$count)\t$in_range\t$correct_inner\t$p1\t$p2\t$p3\n";
+     $students{$name}{err}{flank}="the 2 flanking primers have $count match(es) but should have 2, 1 for each";
 
+   }
    if (($correct_matches eq 'yes') and ($in_range  eq 'yes') and ($correct_inner eq 'yes')){
-     my $line = "$name\t$loc" . "_p1\t$p1\n$name\t$loc" . "_p2\t$p2\n$name\t$loc" . "_p3\t$p2\n";
+     my $line = "$name\t$loc" . "_p1\t$p1\n$name\t$loc" . "_p2\t$p2\n$name\t$loc" . "_p3\t$p3\n";
      $to_print .= $line;
+     $students{$name}=1;
    }
 
   }
 }
 print "\n\nstudent_count\t$student_count\n";
 print "\n\n$to_print\n";
+foreach my $name (keys %students){
+  my $complete = $students{$name};
+  my $err_flank;
+  if (exists $students{$name}{err}{flank}){
+   $err_flank =  $students{$name}{err}{flank};
+  }
+  print "$name\t$err_flank\tp1\t-\n$name\t$err_flank\tp2\t-\n$name\t\tp3\t-\n" if !$complete;
+}
