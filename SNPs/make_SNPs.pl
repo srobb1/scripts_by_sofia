@@ -16,7 +16,11 @@ foreach my $file (@bams){
 my $cwd = `pwd`;
 open OUTSH ,">find_SNPs.sh";
 print OUTSH "
-tmp_dir=`mktemp --tmpdir=$tempDir -d`
+if [ -d $tempDir ]; then
+ tmp_dir=`mktemp --tmpdir=$tempDir -d`
+else
+ tmp_dir=`mktemp --tmpdir=/tmp -d`
+fi
 cd $cwd
 $java  -Djava.io.tmpdir=\$tmp_dir -Xmx128g -jar $GATK -T UnifiedGenotyper -R $genome $input  -o $descr.raw.vcf -glm SNP --read_filter BadCigar -nt 48 --metrics_file $descr.info
 rm -rf \$tmp_dir

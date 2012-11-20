@@ -29,8 +29,14 @@ foreach my $bam (@bam_files) {
   print OUTSH "#PBS -l nodes=1:ppn=8\n";
   print OUTSH "hostname\n";
   print OUTSH "cd $cwd\n";
-  print OUTSH "tmp_dir=`mktemp --tmpdir=$tempDir -d`\n";
-  print OUTSH "echo \"start merge\"\n";
+  print OUTSH "
+if [ -d $tempDir ]; then
+ tmp_dir=`mktemp --tmpdir=$tempDir -d`
+else
+ tmp_dir=`mktemp --tmpdir=/tmp -d`
+\n";
+ 
+ print OUTSH "echo \"start merge\"\n";
   print OUTSH "
 if [ ! -f $name.merged.bam ]; then
   /usr/local/java/oracle-jdk1.7.0_01/bin/java -Xmx24g -jar /usr/local/java/common/lib/picard-tools/MergeSamFiles.jar OUTPUT=$name.merged.bam SORT_ORDER=coordinate ASSUME_SORTED=true MERGE_SEQUENCE_DICTIONARIES=true USE_THREADING=true $input CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT
