@@ -34,6 +34,7 @@ if [ -d $tempDir ]; then
  tmp_dir=`mktemp --tmpdir=$tempDir -d`
 else
  tmp_dir=`mktemp --tmpdir=/tmp -d`
+fi
 \n";
  
  print OUTSH "echo \"start merge\"\n";
