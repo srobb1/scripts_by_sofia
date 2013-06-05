@@ -14,8 +14,8 @@ my $tmpDir = '/scratch';
 
 open SH, ">$base.filter.sh";
 print SH "
-if [ -d $tempDir ]; then
- tmp_dir=`mktemp --tmpdir=$tempDir -d`
+if [ -d $tmpDir ]; then
+ tmp_dir=`mktemp --tmpdir=$tmpDir -d`
 else
  tmp_dir=`mktemp --tmpdir=/tmp -d`
 fi

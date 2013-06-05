@@ -55,6 +55,7 @@ while (my $line = <VCFTAB>){
   }
 }
 
+
 my %uniqHomo;
 my %uniqHomLoc;
 my %uniqHet;
@@ -62,6 +63,7 @@ my %mixed;
 my $unq_hets;
 my %total_hom;
 my $total_shared_hom;
+open PRIVATE, ">private.txt";
 foreach my $loc (sort keys %binary){
   my @strains = keys %{$binary{$loc}};
   my @codes;
@@ -87,6 +89,7 @@ foreach my $loc (sort keys %binary){
       my $code = $codes[$i];
       if ($code == 1){
         $total_hom{$strains[$i]}++;
+        print PRIVATE "$strains[$i]\t$loc\t$SNPs{$loc}{$strains[$i]}\n";
       }
     }
   }
@@ -136,14 +139,14 @@ foreach my $loc (sort keys %binary){
     }
   }
 }
-print "\n\ncount of total HOMO SNPs. Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
-foreach my $strain (keys %total_hom){
-  my $count = $total_hom{$strain};
-  print "$strain\t$count\n";
-}
 print "\n\ncount of unique HOMO SNPs. Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
 foreach my $strain (keys %uniqHomo){
   my $count = $uniqHomo{$strain};
+  print "$strain\t$count\n";
+}
+print "\n\ncount of total HOMO SNPs. Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
+foreach my $strain (keys %total_hom){
+  my $count = $total_hom{$strain};
   print "$strain\t$count\n";
 }
 print "\n\ncount of shared HOMO SNPs. Ref=T T/T,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";

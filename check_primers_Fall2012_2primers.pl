@@ -24,7 +24,11 @@ open IN , $file or die "Can't open $file $!";
 open OUT , ">$file.fa" or die "Can't open $file.fa for writting $!";
 
 while (my $line = <IN>){
-  my ($id , $primer1,$primer2 ) = split /\s+/ , $line;
+  chomp $line;
+  my ($date, $id , $primer1,$primer2 ) = split /\t/ , $line;
+  print " ($date, $id , $primer1,$primer2 ) \n";
+  $primer1 = lc ($primer1);
+  $primer2 = lc ($primer2);
   $primers{$id}{p1}{seq}=$primer1;
   $primers{$id}{p2}{seq}=$primer2;
   $primers{$id}{p1}{len}=length ($primer1);
@@ -36,7 +40,7 @@ while (my $line = <IN>){
 }
 
 
-`blastall -F F -p blastn -i $file.fa -d $db -o $file.blastout -m8` if !-e "$file.blastout";
+`blastall -F F -p blastn -i $file.fa -d $db -o $file.blastout -m8`;# if !-e "$file.blastout";
 
 
 my $count;
@@ -87,8 +91,7 @@ foreach my $primer_set ( keys %primers ) {
   }
   foreach my $sub (keys %hits){
     my @sorted_values = sort {$a <=> $b} @{$hits{$sub}};
-    next if @sorted_values < 4; #2 starts, 2 ends ## just needs to map completely
-    #next if @sorted_values != 4; #2 starts, 2 ends ## needs to map uniquely
+    next if @sorted_values < 4; #2 starts, 2 ends
     my $smallest = shift @sorted_values;
     my $largest = pop @sorted_values;
     my $p1 = uc $primers{$primer_set}{p1}{seq};

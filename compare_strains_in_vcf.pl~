@@ -136,12 +136,12 @@ foreach my $loc (sort keys %binary){
     }
   }
 }
-print "\n\ncount of total HOMO SNPs. Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
+print "\n\ncount of total HOMO SNPs (strain.vs.ref). Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
 foreach my $strain (keys %total_hom){
   my $count = $total_hom{$strain};
   print "$strain\t$count\n";
 }
-print "\n\ncount of unique HOMO SNPs. Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
+print "\n\ncount of unique HOMO SNPs (strain.vs.ref). Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
 foreach my $strain (keys %uniqHomo){
   my $count = $uniqHomo{$strain};
   print "$strain\t$count\n";

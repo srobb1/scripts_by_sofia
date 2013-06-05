@@ -4,7 +4,7 @@ use strict;
 
 my $file = shift;
 my $db = shift;
-
+my $uniq_only = defined $ARGV[2] ? $ARGV[2] : 0 ;
 my %primers;
 
 if (!defined $file){
@@ -30,7 +30,7 @@ while (my $line = <IN>){
   $primers{$id}{p1}{len}=length ($primer1);
   $primers{$id}{p2}{len}=length ($primer2);
   my $seq_for_blast = $primer1 . "NNNNNNNNNN" . $primer2;
-  
+  $primers{$id}{found}=0; 
  print OUT ">$id\n$seq_for_blast\n";
 
 }
@@ -55,9 +55,22 @@ while ( my $line = <BLASTOUT> ) {
   my $p2_len = $primers{$primer_pair}{p2}{len};
   next if  (($alignLen != $p1_len) and ($alignLen != $p2_len));
   next if  ($perId != 100);
-  #$primers{$primer_pair}{blast}{$count}{sub}    = $subject;
+  next if  ($mm > 0);
+  next if  ($gapOpenings > 0);
+  my $strand = ($qEnd - $qStart > 0) ? 1 : -1 ;
+  my $p;
+  if ($qStart < $p1_len) {
+    ## this is p1 aligned
+    next if $alignLen < $p1_len;
+    $p = 'p1';
+  }else{
+    ## ths is p2 aligned
+    next if $alignLen < $p2_len;
+    $p = 'p2';
+  }
+  ## mayabe i can use strand and p1 p2 identity to simplify proper primer finding
+  $primers{$primer_pair}{blast}{$count}{$subject}{strand} = $strand;
   $primers{$primer_pair}{blast}{$count}{$subject}{alnLen} = $alignLen;
-  $primers{$primer_pair}{blast}{$count}{$subject}{mm}     = $mm;
   $primers{$primer_pair}{blast}{$count}{$subject}{perID}  = $perId;
   $primers{$primer_pair}{blast}{$count}{$subject}{qStart} = $qStart;
   $primers{$primer_pair}{blast}{$count}{$subject}{qEnd}   = $qEnd;
@@ -66,10 +79,12 @@ while ( my $line = <BLASTOUT> ) {
   $primers{$primer_pair}{blast}{$count}{$subject}{e}      = $e;
   $primers{$primer_pair}{blast}{$count}{$subject}{line}   = $line;
   $primers{$primer_pair}{subject}{$subject}=1;
+  $primers{$primer_pair}{found}=1;
   
 }
 my %warn;
-  print "primer_set\tproductSize\thit:start..end\tin_range\tprimer1\tprimer2\n";
+  print "primer_set\tproductSize\thit:start..end\tin_range\tmaps\tprimer1\tprimer2\n";
+my %matches;
 foreach my $primer_set ( keys %primers ) {
   #my @subjects = keys %{$primers{$primer_set}{subject}};
   #next if @subjects > 1;
@@ -81,26 +96,48 @@ foreach my $primer_set ( keys %primers ) {
       push @{ $hits{$sub}} , $primers{$primer_set}{blast}{$count}{$sub}{sStart} , $primers{$primer_set}{blast}{$count}{$sub}{sEnd};
     }
   }
-  my $loc = 0;
-  if ($primer_set =~ /\D+(\d{3,})/){
-    $loc = $1;
+  my ($loc_chr,$loc_start,$loc_end) = (0,0,0);
+  if ($primer_set =~ /\b(\w+):(\d+)..(\d+)/){
+    ($loc_chr,$loc_start,$loc_end) = ($1, $2, $3);
   }
   foreach my $sub (keys %hits){
     my @sorted_values = sort {$a <=> $b} @{$hits{$sub}};
-    next if @sorted_values < 4; #2 starts, 2 ends ## just needs to map completely
-    #next if @sorted_values != 4; #2 starts, 2 ends ## needs to map uniquely
+    my $maps;
+    
+    if (@sorted_values < 4){
+      #2 starts, 2 ends ## just needs to map completely
+      # ==========       ===========
+      # S        E       S         E
+      $maps = "both primers do not map";
+    }elsif (@sorted_values == 4){
+      #2 starts, 2 ends ## exactly maps 
+      $maps = "both primers map uniquely";
+    }elsif (@sorted_values > 4){
+      #more than only 2 starts and  2 ends  
+      $maps = "primers do not map uniquely";
+    }
+    if ($uniq_only){
+      next if @sorted_values != 4; #exactly 2 starts, 2 ends ## needs to map uniquely
+    }
     my $smallest = shift @sorted_values;
     my $largest = pop @sorted_values;
     my $p1 = uc $primers{$primer_set}{p1}{seq};
     my $p2 = uc $primers{$primer_set}{p2}{seq};
     my $product_size = $largest-$smallest+1;
     my $in_range = 'N/A';
-    if (defined $loc and $loc > $smallest and $loc < $largest){
+    if ($sub eq $loc_chr and $loc_start > $smallest and $loc_end < $largest){
       $in_range = 'yes';
     }else{
       $in_range = 'no';
     }
-    print "$primer_set\t$product_size\t$sub:$smallest..$largest\t$in_range\t$p1\t$p2\n" if $product_size < 10000 and $product_size > 100;
+      print "$primer_set\t$product_size\t$sub:$smallest..$largest\t$in_range\t$maps\t$p1\t$p2\n";# if $product_size < 10000 and $product_size > 100;
+
     #print "$primer_set\t",$largest-$smallest+1,"\t$subjects[0]:$smallest..$largest\t$p1\t$p2\n";
+  }
+}
+foreach my $id (keys %primers){
+  my $found = $primers{$id}{found};
+  if (!$found){
+    print "$id\tNo blast hit found\n";
   }
 }

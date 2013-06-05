@@ -87,8 +87,8 @@ foreach my $primer_set ( keys %primers ) {
   }
   foreach my $sub (keys %hits){
     my @sorted_values = sort {$a <=> $b} @{$hits{$sub}};
-    next if @sorted_values < 4; #2 starts, 2 ends ## just needs to map completely
-    #next if @sorted_values != 4; #2 starts, 2 ends ## needs to map uniquely
+    #next if @sorted_values < 4; #2 starts, 2 ends ## just needs to map completely
+    next if @sorted_values != 4; #2 starts, 2 ends ## needs to map uniquely
     my $smallest = shift @sorted_values;
     my $largest = pop @sorted_values;
     my $p1 = uc $primers{$primer_set}{p1}{seq};

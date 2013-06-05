@@ -12,6 +12,7 @@ foreach  my $line (@jobs){
   chomp $line;
   next if $line !~ /^\d/;
   my @line = split /\s+/ , $line;
-  $status{$line[2]}{$line[9]}++;
+  my $proc = $line[6];
+  $status{$line[2]}{$line[9]}+=$proc;
 }
 print Dumper \%status;

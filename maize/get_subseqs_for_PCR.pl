@@ -6,10 +6,10 @@ use strict;
 use Bio::DB::Fasta;
 use Bio::Seq;
 
-my $file  = shift;
-my $fasta = shift; ##genome fasta
-my $padding = 400;
-
+my $file  = $ARGV[0];
+my $fasta = $ARGV[1]; ##genome fasta
+my $padding = defined $ARGV[2] ? $ARGV[2]  : 400;
+print $padding ,"\n";
 if ( !defined $file or !defined $fasta ) {
   die "./script file_with_range_info_to_be_collected fasta_file_of_genome";
 }
@@ -19,12 +19,14 @@ my @path = split /\// , $file;
 my $name = pop @path;
 my ($pre,$ext) = $name =~ /(\S+)\.(\S+)$/;
 my $path = join '/' , @path;
-open FAOUT, ">$path/for_PCR_TEplus$padding"."_seq.$pre.fa";
+open FAOUT, ">for_PCR_TEplus$padding"."_seq.$pre.fa";
 while ( my $line = <IN> ) {
   next if $line =~ /Not found/;
   chomp $line;
   #ZM_CACTA_72|methyl|chr8:118403324..118403478|complete|chr8:118403324..118403478
-  my ($name,$methyl,$ref,$te_start,$te_end) = $line =~/^(\S+)\|(methyl.+)\|complete\|(\S+):(\d+)\.\.(\d+)$/;
+  #my ($name,$methyl,$ref,$te_start,$te_end) = $line =~/^(\S+)\|(methyl.+)\|complete\|(\S+):(\d+)\.\.(\d+)$/;
+  #>10213_ZM_mhAT_288 TSD=........ chr2:20658342..20659773,len=1432,score=1.9,strand=+,methylCG=95.30669146,methylCHG=71.24142661,methylCHH=0.239051444
+  my ($name,$ref,$te_start,$te_end) = $line =~/^>(\S+).+(chr\d+):(\d+)\.\.(\d+)/;
   my $start = $te_start - $padding;
   my $end = $te_end + $padding;
   my $subseq      = getSeq_fastacmd( $ref, $start,$end );

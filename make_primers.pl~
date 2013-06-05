@@ -27,7 +27,7 @@ while (my $seq_obj = $seqIO_obj->next_seq){
     my $range = "$i-$stop";
     push @ranges, $range;
   }
-  #push @ranges, $len-200 . "-$len";
+  push @ranges, $len-200 . "-$len";
   my $ranges = join " ", @ranges;
   
   print P3IN "SEQUENCE_ID=$id|$te|$loc

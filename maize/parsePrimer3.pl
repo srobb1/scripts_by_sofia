@@ -57,13 +57,14 @@ while (my $line = <IN>){
 		next;
 	}
 }
-#open OUTFASTA , ">$file.primerProduct.fasta";
+open OUTPRIMERS , ">$file.primersList.txt";
 print "ID\tSEQLength\tprimerSetNum\tprimerOrient\tproduct_size\tstart\tlen\ttm\tgc%\tprimerSeq\n";
 foreach my $id (sort keys %primer){
 	my $seqLen = $primer{$id}{1}{SEQ_LENGTH};
 	my $sequence = $primer{$id}{1}{SEQUENCE};		
 	foreach my $count (sort {$a <=> $b} keys %{$primer{$id}}){
 		next if $count == 0;
+                next if $primer{$id}{$count}{PRIMER_LEFT_SEQUENCE} eq '' ; 
 		my $leftSeq = $primer{$id}{$count}{PRIMER_LEFT_SEQUENCE};
 		my $rightSeq = $primer{$id}{$count}{PRIMER_RIGHT_SEQUENCE};
 		my $leftStart = $primer{$id}{$count}{PRIMER_LEFT_START};
@@ -80,6 +81,7 @@ foreach my $id (sort keys %primer){
 		my $product = substr ($sequence, $leftStart, $productSize);
 		print "$id\t$seqLen\t$count\tleft\t$productSize\t$leftStart\t$leftLen\t$leftTM\t$leftGC\t$leftSeq\n";
 		print "$id\t$seqLen\t$count\tright\t$productSize\t$rightStart\t$rightLen\t$rightTM\t$rightGC\t$rightSeq\n";
+                print OUTPRIMERS "$id-$count\t$leftSeq\t$rightSeq\n";
 		#print OUTFASTA ">$id(primerSet:$count) productSize=$productSize leftTM=$leftTM leftGC=$leftGC leftSeq=$leftSeq rightTM=$rightTM rightGC=$rightGC rightSeq=$rightSeq\n$product\n";
 	}
 }
