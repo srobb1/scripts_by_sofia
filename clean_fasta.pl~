@@ -5,7 +5,7 @@ my $fasta = shift;
 die "Please provide a fasta file to be cleaned up\n" if !defined $fasta;
 
 my $seqIO_obj = Bio::SeqIO -> new (-file => $fasta , -format => 'fasta');
-my $seqIO_out_obj = Bio::SeqIO -> new (-file => ">$fasta.clean" , -format => 'fasta');
+my $seqIO_out_obj = Bio::SeqIO -> new (-file => $fasta.clean , -format => 'fasta');
 while (my $seq_obj = $seqIO_obj -> next_seq){
   #my $id = $seq_obj -> id;
   #my $desc = $seq_obj -> desc;

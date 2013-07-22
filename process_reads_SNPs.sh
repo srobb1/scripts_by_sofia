@@ -71,22 +71,27 @@ fi
 #make the SAM file, then the BAM file as a sorted file
 if [ ! -f $BASE.bam ]; then
  # now sort: ask for 3gb of memory in case this is big datafile
-java -Xmx3g -jar $PICARD/SortSam.jar I=$BASE.sam O=$BASE.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT CREATE_INDEX=TRUE
+ echo "Sorting: with Picard's SortSam.jar"
+ java -Xmx3g -jar $PICARD/SortSam.jar I=$BASE.sam O=$BASE.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT CREATE_INDEX=TRUE
+ echo "Getting Stats: with samtools flagstat"
  samtools flagstat $BASE.bam > $BASE.flagstat
 fi
 
 # Mark duplicate reads (usually where the forward and reverse are identical, indicating a
 # PCR bias
 if [ ! -f $BASE.dedup.bam ]; then
+echo "marking duplicates with Picard's MarkDuplicates.jar"
 java -Xmx2g -jar $PICARD/MarkDuplicates.jar I=$BASE.bam \
   O=$BASE.dedup.bam METRICS_FILE=$BASE.dedup.metrics \
   CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT
+ echo "Getting Stats: with samtools flagstat"
  samtools flagstat $BASE.dedup.bam > $BASE.dedup.flagstat
 fi
 
 # Fix the ReadGroups - required by GATK
 # right now the read groups aren't set in the depdup.bam file
 if [ ! -f $BASE.RG.bam ]; then
+echo "fixing read groups with Picard's AddOrReplaceReadGroups.jar"
  java -Xmx2g -jar $PICARD/AddOrReplaceReadGroups.jar I=$BASE.dedup.bam O=$BASE.RG.bam \
   SORT_ORDER=coordinate CREATE_INDEX=TRUE \
    RGID=$BASE RGLB=$BASE RGPL=Illumina RGPU=Genomic RGSM=$BASE \
@@ -96,6 +101,7 @@ fi
 # Identify where the variants are to realign around these
 # this includes Indels
 if [ ! -f $BASE.intervals ]; then
+echo "running GATK's RealignerTargetCreator"
  java -Xmx2g -jar $GATK -T RealignerTargetCreator \
  -R $GENOME \
  -o $BASE.intervals \
@@ -105,6 +111,7 @@ fi
 
 # realign the BAM file based on the intervals where there are polymorphism
 if [ ! -f $BASE.realign.bam ]; then
+ echo "Running GATK's IndelRealigner"
  java -Xmx2g -jar $GATK -T IndelRealigner \
   -R $GENOME \
   -targetIntervals $BASE.intervals -I $BASE.RG.bam -o $BASE.realign.bam
@@ -117,6 +124,7 @@ fi
 
 ## recalibrate the quality scores based on known sites
 if [ ! -f $BASE.recal_data.grp ] ; then 
+ echo "Running GATK's BaseRecalibrator"
  java -Xmx4g -jar $GATK \
  -T BaseRecalibrator \
  -I $BASE.realign.bam \
@@ -127,6 +135,7 @@ fi
 
 ## print out new scores in a new recal.bam
 if [ ! -f $BASE.recal.bam ] ; then 
+echo "Running GATK's PrintReads to print out new scores after recalibration"
 java -Xmx4g -jar $GATK \
    -T PrintReads \
    -R $GENOME \
@@ -141,18 +150,20 @@ fi
 # with the -glm BOTH or -glm INDEL
 
 if [ ! -f  $BASE.GATK.vcf ]; then
+echo "Running GATK's UnifiedGenotyper to call SNPs"
 java -Xmx3g -jar $GATK -T UnifiedGenotyper \
   -glm SNP \
   -I $BASE.recal.bam \
   -R $GENOME \
   -o $BASE.GATK.vcf \
-  -nt 4 \
+  -nt 4 
 fi
 
 # run the filtering to mark low-quality SNPs
 # See this for more information on best practices
 # http://www.broadinstitute.org/gatk/guide/topic?name=best-practices
 if [ ! -f $BASE.GATK_filtered.vcf ]; then
+echo "Running GATK's VariantFiltration to find good SNPs"
     java -Xmx3g -jar $GATK  \
     -T VariantFiltration \
     -o $BASE.GATK_filtered.vcf \
@@ -171,6 +182,7 @@ fi
 
 # now only select the variants which are NOT filtered to be output
 if [ ! -f $BASE.GATK_selected.vcf ]; then
+echo "Running GATK's SelectVariants to select only good SNPs"
  java -Xmx3g -jar $GATK \
   -T SelectVariants \
   -o $BASE.GATK_selected.vcf \
@@ -186,3 +198,22 @@ module load vcftools
 # would also do other work with the VCF file in vcftools to look at summary statistics
 vcf-to-tab < $BASE.GATK_filtered.vcf > $BASE.GATK_filtered.SNPs.tab
 
+## clean up
+FILESIZE=$(stat -c%s "$BASE.GATK_selected.vcf")
+if [[ $FILESIZE > 5000 ]]; then
+  echo "Cleaning up: removing files"
+  rm $BASE.realign.bai
+  rm $BASE.realign.bam
+  rm $BASE.dedup.metrics
+  rm $BASE.dedup.bai
+  rm $BASE.dedup.bam
+  rm $BASE.recal_data.grp
+  rm $BASE.bam
+  rm $BASE.bai
+  rm $BASE.sam
+  rm $BASE.intervals
+  rm ${BASE}_p2.sai
+  rm ${BASE}_p1.sai
+  rm $BASE.RG.bai
+  rm $BASE.RG.bam
+fi

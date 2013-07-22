@@ -24,7 +24,7 @@ cd $CWD
 # include some programs in our path on the biocluster system (would be different on other systems)
 #module load bwa/0.6.2
 module load samtools/0.1.18-r580
-module load GATK
+module load GATK/2.4-3-g2a7af43
 module load picard
 module load sickle
 module load bwa/0.6.2
@@ -38,7 +38,6 @@ fi
 if [ ! -d clean_fq ]; then
   mkdir $CWD/clean_fq
 fi
-
 CLEAN_1=$CWD/clean_fq/"$BASE"_p1.fq
 CLEAN_2=$CWD/clean_fq/"$BASE"_p2.fq
 CLEAN_U=$CWD/clean_fq/"$BASE"_unpaired.fq
@@ -166,3 +165,23 @@ module load vcftools
 # would also do other work with the VCF file in vcftools to look at summary statistics
 vcf-to-tab < $BASE.genotype.vcf > $BASE.genotype.tab
 
+
+## clean up
+FILESIZE=$(stat -c%s "$BASE.genotype.vcf")
+if [[ $FILESIZE > 5000 ]]; then
+  echo "Cleaning up: removing files"
+  rm $BASE.realign.bai
+  rm $BASE.realign.bam
+  rm $BASE.dedup.metrics
+  rm $BASE.dedup.bai
+  rm $BASE.dedup.bam
+  rm $BASE.recal_data.grp
+  rm $BASE.bam
+  rm $BASE.bai
+  rm $BASE.sam
+  rm $BASE.intervals
+  rm ${BASE}_p2.sai
+  rm ${BASE}_p1.sai
+  rm $BASE.RG.bai
+  rm $BASE.RG.bam
+fi

@@ -62,6 +62,7 @@ my %mixed;
 my $unq_hets;
 my %total_hom;
 my $total_shared_hom;
+my $total_shared_het;
 foreach my $loc (sort keys %binary){
   my @strains = keys %{$binary{$loc}};
   my @codes;
@@ -94,6 +95,12 @@ foreach my $loc (sort keys %binary){
   ## if all strains are a 1, then if it is a 1 add up its total shared hom count;
   if ($hets_count == 0 and $missing_data_count == 0 and $homo_diff_from_ref_count == scalar @strains){
         $total_shared_hom++;
+  }
+  ## for total shared het
+  ## one strain is het, count it
+  ## if all strains are a 1, then if it is a 1 add up its total shared hom count;
+  if ($hets_count > 0 and $missing_data_count == 0){
+        $total_shared_het++;
   }
 
   ## uniq homozygous snps
@@ -136,12 +143,12 @@ foreach my $loc (sort keys %binary){
     }
   }
 }
-print "\n\ncount of total HOMO SNPs (strain.vs.ref). Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
+print "\n\ncount of total HOMO SNPs. Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
 foreach my $strain (keys %total_hom){
   my $count = $total_hom{$strain};
   print "$strain\t$count\n";
 }
-print "\n\ncount of unique HOMO SNPs (strain.vs.ref). Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
+print "\n\ncount of unique HOMO SNPs. Ref=T A/A,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
 foreach my $strain (keys %uniqHomo){
   my $count = $uniqHomo{$strain};
   print "$strain\t$count\n";
@@ -149,6 +156,8 @@ foreach my $strain (keys %uniqHomo){
 print "\n\ncount of shared HOMO SNPs. Ref=T T/T,T/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";
 print "@strains\t$total_shared_hom\n";
 
+print "\n\ncount of shared HET loci. Ref=T T/T,T/A and Ref=T T/A,T/A are counted:\n";
+print "@strains\t$total_shared_hom\n";
 
 if ((scalar (keys %uniqHet)) > 1){
 print "\n\ncount of unique HET SNPs. Ref=T T/T,A/T is counted. Ref=T A/A,A/T is not counted for either strain:\n";

@@ -1,0 +1,135 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use Data::Dumper;
+my %pairs;
+
+my $final_dir = shift; 
+my $fq_dir = shift;
+my $rename_file = shift;
+## do a test run or the real thing 0=real thing, 1=test run
+my $test = defined $ARGV[3] ? $ARGV[3] : 0; 
+#my $test = 1;
+
+if (!defined $fq_dir or !defined $final_dir or !defined $rename_file){
+  die "perl rename_files.pl OUTPUT_DIR DIR_OF_FASTQ BARCODE_SAMPLE_FILE
+example usage:
+perl rename_files.pl /home_stajichlab/robb/Wessler-Rice/RIL/Illumina FC153_RIL_1_12 11122012.sample_adapter.list\n";
+}
+## head 11122012.sample_adapter.list
+##RIL1    22
+##RIL2    3
+##RIL10   23
+
+my @files = <$fq_dir/flowcell*fastq>;
+
+my %barcodes;
+my %rename;
+while (my $line = <DATA>){
+  chomp $line;
+  if ($line =~ /^\d/){
+    my ($code,$adapter) = split /\s+/ , $line;
+    print "($code,$adapter)\n" if $test;
+    $barcodes{$code}=$adapter;
+  }
+}
+
+
+open (IDFILE, $rename_file) or die "Can't open $rename_file\n";
+while (my $line = <IDFILE>){
+  chomp $line;
+  my ($sample,$code) = split /\s+/ , $line;
+  print "($sample,$code)\n" if $test;
+  my $adapter = $barcodes{$code};
+  $rename{$adapter}=$sample;
+}
+
+
+foreach my $file (@files){
+  #flowcell153_lane5_pair1_ACTGAT.fastq 
+  chomp $file;
+  my ($fc,$lane,$pair,$barcode) = $file =~ /.+flowcell(\d+)_lane(\d+)_pair(\d)_([ATGC]{6})\.fastq/;
+  print "($fc,$lane,$pair,$barcode)\n" if $test;
+  if (exists $rename{$barcode}){
+    my $strain = $rename{$barcode};
+    my $mv_dir = "$final_dir/$strain";
+    if (!-d $mv_dir){
+      `mkdir $mv_dir` if !$test;
+    }
+    my $base = $strain . "_" . $barcode . "_FC$fc"."L$lane" ;
+    my $newfile=$base."_p$pair.fq" ;
+    $pairs{$base}{$pair}="$mv_dir/$newfile";
+    #print "$mv_dir/$newfile\n";
+    #if (!-e "$mv_dir/$newfile"){
+    if (1){
+      print "ln -s $file $newfile\n" if !$test;
+      `ln -s $file $newfile` if !$test;
+      `rm -f $mv_dir/$newfile` if !$test;
+      print "ln -s $file $mv_dir/$newfile\n" if !$test;
+      `ln -s $file $mv_dir/$newfile` if !$test;
+    }
+  }
+}
+foreach my $strain (keys %pairs){
+  my @toPrint;
+  push @toPrint , $strain;
+  my $p1 = exists $pairs{$strain}{1} ? $pairs{$strain}{1} : '';
+  my $p2 = exists $pairs{$strain}{2} ? $pairs{$strain}{2} : '';
+  if (defined $p1){
+    push @toPrint , $p1; 
+  }
+  if (defined $p2){
+    push @toPrint , $p2;
+  }
+  print join (",",@toPrint) , "\n";
+}
+## IDs of Illumina barcodes
+__DATA__
+1	ATCACG
+2	CGATGT
+3	TTAGGC
+4	TGACCA
+5	ACAGTG
+6	GCCAAT
+7	CAGATC
+8	ACTTGA
+9	GATCAG
+10	TAGCTT
+11	GGCTAC
+12	CTTGTA
+13	AGTCAA
+14	AGTTCC
+15	ATGTCA
+16	CCGTCC
+17	GTAGAG
+18	GTCCGC
+19	GTGAAA
+20	GTGGCC
+21	GTTTCG
+22	CGTACG
+23	GAGTGG
+24	GGTAGC
+25	ACTGAT
+26	ATGAGC
+27	ATTCCT
+28	CAAAAG
+29	CAACTA
+30	CACCGG
+31	CACGAT
+32	CACTCA
+33	CAGGCG
+34	CATGGC
+35	CATTTT
+36	CCAACA
+37	CGGAAT
+38	CTAGCT
+39	CTATAC
+40	CTCAGA
+41	GACGAC
+42	TAATCG
+43	TACAGC
+44	TATAAT
+45	TCATTC
+46	TCCCGA
+47	TCGAAG
+48	TCGGCA

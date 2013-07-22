@@ -24,7 +24,7 @@ cd $CWD
 # include some programs in our path on the biocluster system (would be different on other systems)
 #module load bwa/0.6.2
 module load samtools/0.1.18-r580
-module load GATK
+module load GATK/2.4-3-g2a7af43
 module load picard
 module load sickle
 module load bwa/0.6.2
@@ -38,7 +38,6 @@ fi
 if [ ! -d clean_fq ]; then
   mkdir $CWD/clean_fq
 fi
-
 CLEAN_1=$CWD/clean_fq/"$BASE"_p1.fq
 CLEAN_2=$CWD/clean_fq/"$BASE"_p2.fq
 CLEAN_U=$CWD/clean_fq/"$BASE"_unpaired.fq
@@ -145,12 +144,12 @@ fi
 # with the -glm BOTH or -glm INDEL
 
 ## add call specific bases
-if [ ! -f  $BASE.GATK.vcf ]; then
+if [ ! -f  $BASE.genotype.vcf ]; then
 java -Xmx3g -jar $GATK -T UnifiedGenotyper \
   -glm SNP \
   -I $BASE.recal.bam \
   -R $GENOME \
-  -o $BASE.GATK.vcf \
+  -o $BASE.genotype.vcf \
   -nt 4 \
   --dbsnp $knownSites \
   --genotyping_mode GENOTYPE_GIVEN_ALLELES \
@@ -158,41 +157,29 @@ java -Xmx3g -jar $GATK -T UnifiedGenotyper \
   --output_mode EMIT_ALL_SITES
 fi
 
-### run the filtering to mark low-quality SNPs
-### See this for more information on best practices
-### http://www.broadinstitute.org/gatk/guide/topic?name=best-practices
-##if [ ! -f $BASE.GATK_filtered.vcf ]; then
-##    java -Xmx3g -jar $GATK  \
-##    -T VariantFiltration \
-##    -o $BASE.GATK_filtered.vcf \
-##    --variant $BASE.GATK.vcf \
-##    -R $GENOME \
-##    --clusterWindowSize 10 \
-##    --filterExpression "QD<5.0"  --filterName QualByDepth \
-##    --filterExpression "HRun>=4" --filterName HomopolymerRun \
-##    --filterExpression "QUAL < 60"  --filterName QScore \
-##    --filterExpression "MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)"  --filterName MapQual \
-##    --filterExpression "FS > 60.0"  --filterName FisherStrandBias \
-##    --filterExpression "HaplotypeScore > 13.0"   --filterName HaplotypeScore \
-##    --filterExpression "MQRankSum < -12.5" --filterName MQRankSum \
-##    --filterExpression "ReadPosRankSum < -8.0" --filterName ReadPosRankSum 
-##fi
-##
-### now only select the variants which are NOT filtered to be output
-##if [ ! -f $BASE.GATK_selected.vcf ]; then
-## java -Xmx3g -jar $GATK \
-##  -T SelectVariants \
-##  -o $BASE.GATK_selected.vcf \
-##  --variant $BASE.GATK_filtered.vcf \
-##  -R $GENOME  \
-##  --excludeFiltered 
-##fi
 
 module load vcftools
 
 # run VCF tools to convert the VCF file into tab-delimited
 # for some simple look at the Genotypes
 # would also do other work with the VCF file in vcftools to look at summary statistics
-vcf-to-tab < $BASE.GATK.vcf > $BASE.GATK.tab
-#vcf-to-tab < $BASE.GATK_filtered.vcf > $BASE.GATK_filtered.SNPs.tab
+vcf-to-tab < $BASE.genotype.vcf > $BASE.genotype.tab
 
+
+## clean up
+if [ ! -f  $BASE.genotype.vcf ]; then
+  rm $BASE.realign.bai
+  rm $BASE.realign.bam
+  rm $BASE.dedup.metrics
+  rm $BASE.dedup.bai
+  rm $BASE.dedup.bam
+  rm $BASE.recal_data.grp
+  rm $BASE.bam
+  rm $BASE.bai
+  rm $BASE.sam
+  rm $BASE.intervals
+  rm ${BASE}_p2.sai
+  rm ${BASE}_p1.sai
+  rm $BASE.RG.bai
+  rm $BASE.RG.bam
+fi
