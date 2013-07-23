@@ -30,7 +30,7 @@ foreach my $bam (@bam_files) {
   print OUTSH "hostname\n";
   print OUTSH "cd $cwd\n";
   print OUTSH "
-if [ -d $tmpDir ]; then
+if [ -d $tempDir ]; then
  tmp_dir=`mktemp --tmpdir=$tempDir -d`
 else
  tmp_dir=`mktemp --tmpdir=/tmp -d`

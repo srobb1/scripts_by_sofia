@@ -30,7 +30,7 @@ while ( my $line = <IN> ) {
   my $empty_1 = $start-$padding;
   my $empty_2 = $start -1;
   my $empty_3 = $end+$TSD_len+1;
-  my $empty_4 = $empty_3+$padding;
+  my $empty_4 = $empty_3+$padding-1;
   my $subseq_before      = getSeq_fastacmd( $ref, $empty_1 , $empty_2 );
   my $subseq_after      = getSeq_fastacmd( $ref, $empty_3 , $empty_4 );
   print ">$ref:$empty_1..$empty_2","[insert($ref:$start..$end)]$empty_3..$empty_4\n$subseq_before"."$subseq_after\n";

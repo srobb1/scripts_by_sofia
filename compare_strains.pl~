@@ -14,7 +14,8 @@ foreach my $file (@insert_files){
    chomp $line;
    next if $line =~ /chromosome.pos.+avg_flan/;
       my ($strain, $te, $tsd, $pos, $spanners, $flankers, $class) = split /\t/ , $line;
-      $class =~ s/(homozygous).+/$1/;
+      ##remove anything following a slash or a ? from the class
+      $class =~ s/\\.+//;
       $class =~ s/\?//;
       $inserts{$pos}{$strain}=$class;
   }
