@@ -4,13 +4,12 @@ use strict;
 use Data::Dumper;
 my %pairs;
 
-my $final_dir = shift; 
-my $fq_dir = shift;
-my $rename_file = shift;
+my $final_dir = $ARGV[0]; 
+my $fq_dir = $ARGV[1];
+my $rename_file = $ARGV[2];
 ## do a test run or the real thing 0=real thing, 1=test run
 my $test = defined $ARGV[3] ? $ARGV[3] : 0; 
 #my $test = 1;
-
 if (!defined $fq_dir or !defined $final_dir or !defined $rename_file){
   die "perl rename_files.pl OUTPUT_DIR DIR_OF_FASTQ BARCODE_SAMPLE_FILE
 example usage:
@@ -34,7 +33,7 @@ while (my $line = <DATA>){
   }
 }
 
-
+print "opening $rename_file\n" if $test;
 open (IDFILE, $rename_file) or die "Can't open $rename_file\n";
 while (my $line = <IDFILE>){
   chomp $line;
@@ -44,7 +43,7 @@ while (my $line = <IDFILE>){
   $rename{$adapter}=$sample;
 }
 
-
+print "getting ready to rename\n" if $test;
 foreach my $file (@files){
   #flowcell153_lane5_pair1_ACTGAT.fastq 
   chomp $file;
@@ -60,12 +59,10 @@ foreach my $file (@files){
     my $newfile=$base."_p$pair.fq" ;
     $pairs{$base}{$pair}="$mv_dir/$newfile";
     #print "$mv_dir/$newfile\n";
-    #if (!-e "$mv_dir/$newfile"){
-    if (1){
-      print "ln -s $file $newfile\n" if !$test;
+    if (!-e "$mv_dir/$newfile"){
+    #if (1){
       `ln -s $file $newfile` if !$test;
-      `rm -f $mv_dir/$newfile` if !$test;
-      print "ln -s $file $mv_dir/$newfile\n" if !$test;
+      #`rm -f $mv_dir/$newfile` if !$test;
       `ln -s $file $mv_dir/$newfile` if !$test;
     }
   }
