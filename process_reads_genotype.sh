@@ -73,15 +73,18 @@ fi
 ##
 
 #make the SAM file, then the BAM file as a sorted file
+echo "Sorting $BASE.sam and creating $BASE.bam"
 if [ ! -f $BASE.bam ]; then
  # now sort: ask for 3gb of memory in case this is big datafile
-java -Xmx3g -jar $PICARD/SortSam.jar I=$BASE.sam O=$BASE.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT CREATE_INDEX=TRUE
- samtools flagstat $BASE.bam > $BASE.flagstat
+  java -Xmx3g -jar $PICARD/SortSam.jar I=$BASE.sam O=$BASE.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT CREATE_INDEX=TRUE
+  echo "getting stats on $BASE.bam"
+  samtools flagstat $BASE.bam > $BASE.flagstat
 # java -Xmx3g -jar $PICARD/ReorderSam.jar INPUT=$BASE.bam OUTPUT=$BASE.sort_ordered.bam SORT_ORDER=coordinate REFERENCE=$GENOME MAX_RECORDS_IN_RAM=1000000 CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT
 fi
 
 # Mark duplicate reads (usually where the forward and reverse are identical, indicating a
 # PCR bias
+echo "Marking duplicate reads: Generating $BASE.dedup.bam"
 if [ ! -f $BASE.dedup.bam ]; then
 java -Xmx2g -jar $PICARD/MarkDuplicates.jar I=$BASE.bam \
   O=$BASE.dedup.bam METRICS_FILE=$BASE.dedup.metrics \
@@ -91,6 +94,7 @@ fi
 
 # Fix the ReadGroups - required by GATK
 # right now the read groups aren't set in the depdup.bam file
+echo "Generating $BASE.RG.bam"
 if [ ! -f $BASE.RG.bam ]; then
  java -Xmx2g -jar $PICARD/AddOrReplaceReadGroups.jar I=$BASE.dedup.bam O=$BASE.RG.bam \
   SORT_ORDER=coordinate CREATE_INDEX=TRUE \
@@ -98,6 +102,7 @@ if [ ! -f $BASE.RG.bam ]; then
    VALIDATION_STRINGENCY=SILENT
 fi
 
+echo "Generating $BASE.intervals from $BASE.RG.bam"
 # Identify where the variants are to realign around these
 # this includes Indels
 if [ ! -f $BASE.intervals ]; then
@@ -108,6 +113,7 @@ if [ ! -f $BASE.intervals ]; then
  --known $knownSites
 fi
 
+echo "Generating $BASE.realign.bam from $BASE.RG.bam"
 # realign the BAM file based on the intervals where there are polymorphism
 if [ ! -f $BASE.realign.bam ]; then
  java -Xmx2g -jar $GATK -T IndelRealigner \
@@ -120,6 +126,7 @@ fi
 ##  recal.bam <- recal(realigned.bam)
 ##
 
+echo "Generating $BASE.recal_data.grp from $BASE.realign.bam"
 if [ ! -f $BASE.recal_data.grp ] ; then 
  java -Xmx4g -jar $GATK \
  -T BaseRecalibrator \
@@ -128,7 +135,7 @@ if [ ! -f $BASE.recal_data.grp ] ; then
  -knownSites $knownSites \
  -o $BASE.recal_data.grp 
 fi
-
+echo "Generating $BASE.recal.bam from $BASE.realign.bam"
 if [ ! -f $BASE.recal.bam ] ; then 
 java -Xmx4g -jar $GATK \
    -T PrintReads \
@@ -142,7 +149,7 @@ fi
 # Call the SNPs from this BAM file generating a VCF file
 # using 4 threads (-nt 4) and only calling SNPs, INDELs could be call too
 # with the -glm BOTH or -glm INDEL
-
+echo "Generating VCF from $BASE.recal.bam"
 ## add call specific bases
 if [ ! -f  $BASE.genotype.vcf ]; then
 java -Xmx3g -jar $GATK -T UnifiedGenotyper \
@@ -163,6 +170,7 @@ module load vcftools
 # run VCF tools to convert the VCF file into tab-delimited
 # for some simple look at the Genotypes
 # would also do other work with the VCF file in vcftools to look at summary statistics
+echo "Converting vcf to tab"
 vcf-to-tab < $BASE.genotype.vcf > $BASE.genotype.tab
 
 
