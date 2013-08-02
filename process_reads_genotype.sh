@@ -73,9 +73,9 @@ fi
 ##
 
 #make the SAM file, then the BAM file as a sorted file
-echo "Sorting $BASE.sam and creating $BASE.bam"
 if [ ! -f $BASE.bam ]; then
  # now sort: ask for 3gb of memory in case this is big datafile
+  echo "Sorting $BASE.sam and creating $BASE.bam"
   java -Xmx3g -jar $PICARD/SortSam.jar I=$BASE.sam O=$BASE.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT CREATE_INDEX=TRUE
   echo "getting stats on $BASE.bam"
   samtools flagstat $BASE.bam > $BASE.flagstat
@@ -84,28 +84,28 @@ fi
 
 # Mark duplicate reads (usually where the forward and reverse are identical, indicating a
 # PCR bias
-echo "Marking duplicate reads: Generating $BASE.dedup.bam"
 if [ ! -f $BASE.dedup.bam ]; then
-java -Xmx2g -jar $PICARD/MarkDuplicates.jar I=$BASE.bam \
-  O=$BASE.dedup.bam METRICS_FILE=$BASE.dedup.metrics \
-  CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT
- samtools flagstat $BASE.dedup.bam > $BASE.dedup.flagstat
+  echo "Marking duplicate reads: Generating $BASE.dedup.bam"
+  java -Xmx2g -jar $PICARD/MarkDuplicates.jar I=$BASE.bam \
+   O=$BASE.dedup.bam METRICS_FILE=$BASE.dedup.metrics \
+   CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT
+  samtools flagstat $BASE.dedup.bam > $BASE.dedup.flagstat
 fi
 
 # Fix the ReadGroups - required by GATK
 # right now the read groups aren't set in the depdup.bam file
-echo "Generating $BASE.RG.bam"
 if [ ! -f $BASE.RG.bam ]; then
+ echo "Generating $BASE.RG.bam"
  java -Xmx2g -jar $PICARD/AddOrReplaceReadGroups.jar I=$BASE.dedup.bam O=$BASE.RG.bam \
   SORT_ORDER=coordinate CREATE_INDEX=TRUE \
    RGID=$BASE RGLB=$BASE RGPL=Illumina RGPU=Genomic RGSM=$BASE \
    VALIDATION_STRINGENCY=SILENT
 fi
 
-echo "Generating $BASE.intervals from $BASE.RG.bam"
 # Identify where the variants are to realign around these
 # this includes Indels
 if [ ! -f $BASE.intervals ]; then
+ echo "Generating $BASE.intervals from $BASE.RG.bam"
  java -Xmx2g -jar $GATK -T RealignerTargetCreator \
  -R $GENOME \
  -o $BASE.intervals \
@@ -113,9 +113,9 @@ if [ ! -f $BASE.intervals ]; then
  --known $knownSites
 fi
 
-echo "Generating $BASE.realign.bam from $BASE.RG.bam"
 # realign the BAM file based on the intervals where there are polymorphism
 if [ ! -f $BASE.realign.bam ]; then
+ echo "Generating $BASE.realign.bam from $BASE.RG.bam"
  java -Xmx2g -jar $GATK -T IndelRealigner \
   -R $GENOME \
   -targetIntervals $BASE.intervals -I $BASE.RG.bam -o $BASE.realign.bam
@@ -126,8 +126,8 @@ fi
 ##  recal.bam <- recal(realigned.bam)
 ##
 
-echo "Generating $BASE.recal_data.grp from $BASE.realign.bam"
 if [ ! -f $BASE.recal_data.grp ] ; then 
+ echo "Generating $BASE.recal_data.grp from $BASE.realign.bam"
  java -Xmx4g -jar $GATK \
  -T BaseRecalibrator \
  -I $BASE.realign.bam \
@@ -135,9 +135,10 @@ if [ ! -f $BASE.recal_data.grp ] ; then
  -knownSites $knownSites \
  -o $BASE.recal_data.grp 
 fi
-echo "Generating $BASE.recal.bam from $BASE.realign.bam"
+
 if [ ! -f $BASE.recal.bam ] ; then 
-java -Xmx4g -jar $GATK \
+  echo "Generating $BASE.recal.bam from $BASE.realign.bam"
+  java -Xmx4g -jar $GATK \
    -T PrintReads \
    -R $GENOME \
    -I $BASE.realign.bam \
@@ -149,10 +150,10 @@ fi
 # Call the SNPs from this BAM file generating a VCF file
 # using 4 threads (-nt 4) and only calling SNPs, INDELs could be call too
 # with the -glm BOTH or -glm INDEL
-echo "Generating VCF from $BASE.recal.bam"
 ## add call specific bases
 if [ ! -f  $BASE.genotype.vcf ]; then
-java -Xmx3g -jar $GATK -T UnifiedGenotyper \
+ echo "Generating VCF from $BASE.recal.bam"
+ java -Xmx3g -jar $GATK -T UnifiedGenotyper \
   -glm SNP \
   -I $BASE.recal.bam \
   -R $GENOME \
@@ -175,21 +176,21 @@ vcf-to-tab < $BASE.genotype.vcf > $BASE.genotype.tab
 
 
 ## clean up
-FILESIZE=$(stat -c%s "$BASE.genotype.vcf")
-if [[ $FILESIZE > 5000 ]]; then
-  echo "Cleaning up: removing files"
-  rm $BASE.realign.bai
-  rm $BASE.realign.bam
-  rm $BASE.dedup.metrics
-  rm $BASE.dedup.bai
-  rm $BASE.dedup.bam
-  rm $BASE.recal_data.grp
-  rm $BASE.bam
-  rm $BASE.bai
-  rm $BASE.sam
-  rm $BASE.intervals
-  rm ${BASE}_p2.sai
-  rm ${BASE}_p1.sai
-  rm $BASE.RG.bai
-  rm $BASE.RG.bam
-fi
+#FILESIZE=$(stat -c%s "$BASE.genotype.vcf")
+#if [[ $FILESIZE > 5000 ]]; then
+#  echo "Cleaning up: removing files"
+#  rm $BASE.realign.bai
+#  rm $BASE.realign.bam
+#  rm $BASE.dedup.metrics
+#  rm $BASE.dedup.bai
+#  rm $BASE.dedup.bam
+#  rm $BASE.recal_data.grp
+#  rm $BASE.bam
+#  rm $BASE.bai
+#  rm $BASE.sam
+#  rm $BASE.intervals
+#  rm ${BASE}_p2.sai
+#  rm ${BASE}_p1.sai
+#  rm $BASE.RG.bai
+#  rm $BASE.RG.bam
+#fi
