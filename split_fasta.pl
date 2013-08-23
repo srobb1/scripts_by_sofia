@@ -64,8 +64,9 @@ for (my $i = 0 ; $i < $count ; $i++){
     last if !defined $seq_obj;
     my $id = $seq_obj->id;
     my $seq = $seq_obj->seq;
+    my $desc = $seq_obj->desc;
     #$seq =~ s/(.{1,80})/$1\n/g;
-    print OUT ">$id\n$seq\n";
+    print OUT ">$id $desc\n$seq\n";
   }
   close OUT;
 }
