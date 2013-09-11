@@ -46,8 +46,8 @@ while (my $line = <IDFILE>){
   print "($fc,$lane,$sample,$code,$adaptor,$RIL)\n" if $test;
   #my $adapter = $barcodes{$code};
   $rename{$sample}{RIL}=$RIL;
-  $rename{$sample}{LANE}=$lane;
-  $rename{$sample}{FC}=$fc;
+  $rename{$sample}{LANE}=$lane
+  $rename{$sample}{FC}=$fc
 }
 
 print "getting ready to rename\n" if $test;
