@@ -37,7 +37,7 @@ sub getHelp {
   print " 
 Assistants in creating the config file for makefile to process reads for SNP calling.
 
-usage: $0 -o output_dir -f fastq_dir -i barcode_sample_id_file -q qsub_options -h this message
+usage: $0 -o output_dir -f fastq_dir -r rename_fastq_dir -i barcode_sample_id_file -q qsub_options -h this message
 
   o|output_dir:s      	=> name of directory for all outputed directories and files
   f|fastq_dir:s       	=> name of directory of fastq files to be processed
@@ -132,7 +132,7 @@ clean:
 	rm \$(FINAL_RENAME)
 	rm \$(HOME)/SNPcalling.todo.txt 
 	
-SNPcalling.todo.txt: \$(FINAL_RENAME)
+SNP.todo.txt: \$(FINAL_RENAME)
 	for i in `cat \$^` ; do\\
 	 SHORT=`echo \$\$i|cut -d ',' -f1`;\\
 	 FQ_1=`echo \$\$i|cut -d ',' -f2`;\\
