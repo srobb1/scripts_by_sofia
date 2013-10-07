@@ -177,7 +177,7 @@ vcf-to-tab < $BASE.genotype.vcf > $BASE.genotype.tab
 
 ## clean up
 FILESIZE=$(stat -c%s "$BASE.genotype.vcf")
-if [[ $FILESIZE > 5000 ]]; then
+if [[ $FILESIZE > 50 ]]; then
   if [ -e trash ] ; then
     mkdir trash
   fi
