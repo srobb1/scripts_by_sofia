@@ -11,7 +11,7 @@ my $fasta = $ARGV[1]; ##genome fasta
 my $padding = defined $ARGV[2] ? $ARGV[2]  : 400;
 print $padding ,"\n";
 if ( !defined $file or !defined $fasta ) {
-  die "./script file_with_range_info_to_be_collected fasta_file_of_genome";
+  die "./script file_with_range_info_to_be_collected fasta_file_of_genome\n";
 }
 my %ref;
 open IN, "$file";
