@@ -13,5 +13,5 @@ while (my $seq_obj = $seqIO_obj->next_seq){
 	my $len = $seq_obj->length;
 	$total_len += $len;
 
-	print "$id\t.\tchromosome\t1\t$len\t.\t.\t.\tID=$id;Name=$id\n";
+	print "$id\t.\tchromosome\t1\t$len\t.\t.\t.\tID=$id\n";
 }
