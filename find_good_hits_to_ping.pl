@@ -10,10 +10,12 @@ my ($lib) = $SAM =~ /(.+)\.sam/;
 
 open INSAM, $sam or die "Can't open $sam\n";
 open GOOD , ">goodPingHits.$lib.txt" or die "Can't open goodPingHits.$lib.txt for writing\n";
+open READS , ">goodPingHits.$lib.sam" or die "Can't open goodPingHits.$lib.sam for writing\n";
 #open BAD , ">notPingHits.txt" or die "Can't open notPingHits.txt for writing\n";
 
 my %pairs;
 my %refs;
+print READS "\@CO sample:$lib\n";
 while (my $line = <INSAM>){
   chomp $line;
   if ($line =~ /\@SQ\s|\@HD\s|\@RG\s|\@PG\s/){
@@ -21,6 +23,7 @@ while (my $line = <INSAM>){
     # @SQ     SN:ping5:HEG4/EG4       LN:6547
     my ($ref,$len) = $line =~ /\@SQ\s+SN:(\S+)\s+LN:(\d+)/;
     $refs{$ref}=$len;
+    print READS "$line\n";
     next;
   }
   if ($line =~ /XM:i:(\d+)/){
@@ -85,18 +88,18 @@ foreach my $read (keys %pairs){
     #print "first before, second in\n";
     $in_uniq = 'inUniq' if ($starts[1] >= $uniq_ref_start and $starts[1] <= $uniq_ref_end-$lens[1]);
     print GOOD "$sam\t$ref_first\tfirstBefore,secondIn($in_uniq)\tis:$insertSize\n";
-    print "firstBefore, secondIn($in_uniq): $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print $pairs{$read}{first}{LINE},"\n";
-    print $pairs{$read}{second}{LINE},"\n\n";
+    print READS "\@CO firstBefore, secondIn($in_uniq): $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    print READS $pairs{$read}{first}{LINE},"\n";
+    print READS $pairs{$read}{second}{LINE},"\n";
     $ping_count{$ref_first}++;
   }elsif(( $starts[0] >= $ref_start and $starts[0] <= ($ref_end - $lens[0])) and $starts[1] >= $ref_end ) {
   ## if first is inside ping, second should be after
     #print "first in, second after\n";
     $in_uniq = 'inUniq' if ($starts[0] >= $uniq_ref_start and $starts[0] <= $uniq_ref_end-$lens[0]);
     print GOOD "$sam\t$ref_first\tfirstIn($in_uniq),secondAfter\tis:$insertSize\n";
-    print "firstIN, secondAfter($in_uniq): $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print $pairs{$read}{first}{LINE},"\n";
-    print $pairs{$read}{second}{LINE},"\n\n";
+    print READS "\@CO firstIN, secondAfter($in_uniq): $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    print READS $pairs{$read}{first}{LINE},"\n";
+    print READS $pairs{$read}{second}{LINE},"\n";
     $ping_count{$ref_first}++;
 
   }elsif($starts[0] >= $uniq_ref_start and $starts[0] <= ($uniq_ref_end-$lens[0]) and $starts[1] >= $uniq_ref_start and $starts[1] <= $uniq_ref_end-$lens[1]){
@@ -104,22 +107,22 @@ foreach my $read (keys %pairs){
     warn "BothInsidePing: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end,uniqToPing:$uniq_ref_start..$uniq_ref_end\n";
     #if ($lib =~ /NB/ and $ref_first =~ /NB/){
       warn "$sam\t$ref_first\tbothInsidePing\tis:$insertSize\n";
-      push @bothInside, "BothInsidePing: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end,uniqToPing:$uniq_ref_start..$uniq_ref_end\n";
+      push @bothInside, "\@CO BothInsidePing: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end,uniqToPing:$uniq_ref_start..$uniq_ref_end\n";
       push @bothInside, $pairs{$read}{first}{LINE},"\n";
-      push @bothInside,  $pairs{$read}{second}{LINE},"\n\n";
+      push @bothInside,  $pairs{$read}{second}{LINE},"\n";
     #}
   }
   elsif ($starts[0] >= $ref_end and $starts[1] >= $ref_end){
     warn "BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print "BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print $pairs{$read}{first}{LINE},"\n";
-    print $pairs{$read}{second}{LINE},"\n\n";
+    print READS "\@CO BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    print READS $pairs{$read}{first}{LINE},"\n";
+    print READS $pairs{$read}{second}{LINE},"\n\n";
   }
   elsif ($starts[0] <= $ref_start-$lens[0] and $starts[1]<=$ref_start-$lens[1]){
     warn "BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print "BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print $pairs{$read}{first}{LINE},"\n";
-    print $pairs{$read}{second}{LINE},"\n\n";
+    print READS "\@CO BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    print READS $pairs{$read}{first}{LINE},"\n";
+    print READS $pairs{$read}{second}{LINE},"\n\n";
   }
   elsif (  ($starts[0] < ($ref_start-30) and ($starts[0]+$lens[0]) > ($ref_start+30)   ) and ($starts[1]>$ref_start and $starts[1] <= $ref_end) ){
     ## firstJunction, secondIn
