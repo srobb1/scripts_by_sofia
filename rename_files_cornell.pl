@@ -57,8 +57,12 @@ foreach my $file (@files){
   #1946_2368_6207_N_RILs95-270_CCGTCC_R2.fastq
   #1945_2368_6206_N_RILLib8-247_28-247_GTGAAA_R1.fastq
   #1943_2368_6204_N_RILLib83-230_TTAGGC_R1.fastq
-  my ($one,$two,$sample,$three,$lib,$barcode,$pair) = $file =~ /(\d+)_(\d+)_((\d+)_N_(.+)_([ATCG]{6}))_(R\d)\.fastq/;
-  print "($one,$two,$sample,$three,$lib,$barcode,$pair)\n" if $test;
+  #1111_2368_238_GATCAG_R1.fastq 
+  #1113_2368_138_GATCAG_R2.fastq
+  #1115_2368_85_GTTTCG_R1.fastq
+  #1117_2368_212_GCCAAT_R2.fastq
+  my ($sample,$barcode,$pair) = $file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/;
+  print "($sample,$barcode,$pair)\n" if $test;
   if ($pair eq 'R1'){
     $pair = 1;
   }else {

@@ -12,71 +12,71 @@ my $rename_file = $ARGV[2];
 ## do a test run or the real thing 0=real thing, 1=test run
 my $test = defined $ARGV[3] ? $ARGV[3] : 0; 
 #my $test = 1;
+
 if (!defined $fq_dir or !defined $final_dir or !defined $rename_file){
-  die "perl rename_files.pl OUTPUT_DIR DIR_OF_FASTQ BARCODE_SAMPLE_FILE
+  die "perl rename_files.pl OUTPUT_DIR DIR_OF_FASTQ BARCODE_SAMPLE_FILE FLOWCELL_NAME
 example usage:
-perl rename_files.pl /home_stajichlab/robb/Wessler-Rice/RIL/Illumina FC153_RIL_1_12 11122012.sample_adapter.list\n";
+perl rename_files.pl /home_stajichlab/robb/Wessler-Rice/RIL/Illumina FC153_RIL_1_12 11122012.sample_adapter.list 0813\n";
 }
 ## head cornell.rename.file 
-##2	6205_N_RILLib60-254_ACTTGA 	8	ACTTGA	237
-##2	6205_N_RILLib60-254_ATCACG 	1	ATCACG	60
+##FC lane  ID	adapter	adaptorSeq	RIL
+##0813 2	6205_N_RILLib60-254_ACTTGA 	8	ACTTGA	237
+##0813 2	6205_N_RILLib60-254_ATCACG 	1	ATCACG	60
 
 ## diff from UCR core
 my @files = <$fq_dir/*fastq>;
 
-## no need for barcodes hash if i convert in the excel sheet, maybe next time, let the script conver
-my %barcodes;
 my %rename;
-while (my $line = <DATA>){
-  chomp $line;
-  if ($line =~ /^\d/){
-    my ($code,$adapter) = split /\s+/ , $line;
-    print "($code,$adapter)\n" if $test;
-    $barcodes{$code}=$adapter;
-  }
-}
+## no need for barcodes hash if i convert in the excel sheet, maybe next time, let the script conver
+#my %barcodes;
+#while (my $line = <DATA>){
+#  chomp $line;
+#  if ($line =~ /^\d/){
+#    my ($code,$adapter) = split /\s+/ , $line;
+#    print "($code,$adapter)\n" if $test;
+#    $barcodes{$code}=$adapter;
+#  }
+#}
 
 print "opening $rename_file\n" if $test;
 open (IDFILE, $rename_file) or die "Can't open $rename_file\n";
 while (my $line = <IDFILE>){
   chomp $line;
-  my ($lane,$sample,$code,$adaptor,$RIL) = split /\s+/ , $line;
-  print "($lane,$sample,$code,$adaptor,$RIL)\n" if $test;
+  my ($fc,$lane,$sample,$code,$adaptor,$RIL) = split /\s+/ , $line;
+  print "($fc,$lane,$sample,$code,$adaptor,$RIL)\n" if $test;
   #my $adapter = $barcodes{$code};
   $rename{$sample}{RIL}=$RIL;
-  $rename{$sample}{LANE}=$lane
+  $rename{$sample}{LANE}=$lane;
+  $rename{$sample}{FC}=$fc;
 }
 
 print "getting ready to rename\n" if $test;
 foreach my $file (@files){
-  #flowcell153_lane5_pair1_ACTGAT.fastq 
   chomp $file;
-  #my ($fc,$lane,$pair,$barcode) = $file =~ /.+flowcell(\d+)_lane(\d+)_pair(\d)_([ATGC]{6})\.fastq/;
-  #6205_N_RILLib60-254_ACTTGA
   #1946_2368_6207_N_RILs95-270_TGACCA_R1.fastq
   #1946_2368_6207_N_RILs95-270_CCGTCC_R2.fastq
   #1945_2368_6206_N_RILLib8-247_28-247_GTGAAA_R1.fastq
   #1943_2368_6204_N_RILLib83-230_TTAGGC_R1.fastq
-  my ($one,$two,$sample,$laneID,$lib,$barcode,$pair) = $file =~ /(\d+)_(\d+)_((\d+)_N_(.+)_([ATCG]{6}))_(R\d)\.fastq/;
-  print "($one,$two,$sample,$laneID,$lib,$barcode,$pair)\n" if $test;
+  my ($one,$two,$sample,$three,$lib,$barcode,$pair) = $file =~ /(\d+)_(\d+)_((\d+)_N_(.+)_([ATCG]{6}))_(R\d)\.fastq/;
+  print "($one,$two,$sample,$three,$lib,$barcode,$pair)\n" if $test;
   if ($pair eq 'R1'){
     $pair = 1;
   }else {
     $pair = 2;
   }
   if (exists $rename{$sample}){
-    my $strain = $rename{$sample}{RIL};
+    my $strain = "RIL" . $rename{$sample}{RIL};
     my $lane = $rename{$sample}{LANE};
+    my $flowcell = $rename{$sample}{FC};
     my $mv_dir = "$final_dir/$strain";
     if (!-d $mv_dir){
       `mkdir $mv_dir` if !$test;
     }
-    my $base = "RIL" . $strain . "_" . $barcode . "_FC082013"."L$lane" ;
+    my $base =  $strain . "_" . $barcode . "_FC$flowcell"."L$lane" ;
     my $newfile=$base."_p$pair.fq" ;
     $pairs{$base}{$pair}="$mv_dir/$newfile";
-    #print "$mv_dir/$newfile\n";
-    if (!-e "$mv_dir/$newfile"){
-    #if (1){
+    print "rename $file to $mv_dir/$newfile\n" if $test;
+    if (!-e "$mv_dir/$newfile" and !$test){
       `ln -s $file $newfile` if !$test;
       #`rm -f $mv_dir/$newfile` if !$test;
       `ln -s $file $mv_dir/$newfile` if !$test;
