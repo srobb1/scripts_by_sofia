@@ -35,7 +35,7 @@ GetOptions(
 
 sub getHelp {
   print " 
-Assistants in creating the config file for makefile to process reads for SNP calling.
+Assists in creating the config file for makefile to process reads for SNP calling.
 
 usage: $0 -o output_dir -f fastq_dir -r rename_fastq_dir -i barcode_sample_id_file -q qsub_options -h this message
 
@@ -147,7 +147,8 @@ SNP.todo.txt: \$(FINAL_RENAME)
 	 JOB=`qsub $qsub_q $qsub_l \$(HOME)/run.SNPcalling.\$\$SHORT.sh`;\\
 	 echo \"`date` \$\$JOB run.SNPcalling.\$\$SHORT.sh\" >> \$\@;\\
 	done;\\
-	printf \"\\nThe following jobs have been submitted to the queue:\\n;\"\\
+	printf \"\\nThe following jobs have been submitted to the queue (See SNP.todo.txt):\\n;\"\\
+	sleep 1s;
 	cat  \$\@;
 
 \$(FINAL_RENAME): \$(SCRIPTS)/rename_files.pl \$(RENAME_DIR) \$(HOME) $id_file

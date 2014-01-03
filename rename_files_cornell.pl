@@ -61,7 +61,15 @@ foreach my $file (@files){
   #1113_2368_138_GATCAG_R2.fastq
   #1115_2368_85_GTTTCG_R1.fastq
   #1117_2368_212_GCCAAT_R2.fastq
-  my ($sample,$barcode,$pair) = $file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/;
+  
+  my ($sample,$barcode,$pair);
+
+  if ($file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/){
+    ($sample,$barcode,$pair) = $file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/;
+  }elsif($file =~ /(flowcell\d+_lane\d+)_pair(\d)_([ATCG]{6})]\.fastq/){
+    $sample = $1 . "_" . $3;
+    ($sample,$barcode,$pair) = ($3,$2);
+  }
   print "($sample,$barcode,$pair)\n" if $test;
   if ($pair eq 'R1'){
     $pair = 1;
