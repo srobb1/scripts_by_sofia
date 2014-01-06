@@ -17,7 +17,7 @@ my $RENAME_FASTQ_DIR;
 my $BARCODE_SAMPLE_FILE;
 my $QUEUE_Q;
 my $QUEUE_L;
-
+my $test = 0;
 my $dbSNP  = '/shared/wesslerlab/Rice/HEG4/dbSNP/dbSNPs_VQSR.vcf';
 my $GENOME = '/shared/wesslerlab/Rice/Genome/index/MSU_r7.corrected.fa';
 
@@ -30,6 +30,7 @@ GetOptions(
   'g|genome:s'         => \$GENOME,
   'q|qsub_q:s'         => \$QUEUE_Q,
   'l|qsub_1:s'         => \$QUEUE_L,
+  't|test:i'	       => \$test,
   'h|help'             => \&getHelp,
 );
 
@@ -131,6 +132,7 @@ all: SNP.todo.txt
 clean: 
 	rm \$(FINAL_RENAME)
 	rm \$(HOME)/SNPcalling.todo.txt 
+        rm \$(HOME)/Makefile
 	
 SNP.todo.txt: \$(FINAL_RENAME)
 	for i in `cat \$^` ; do\\
@@ -148,6 +150,7 @@ SNP.todo.txt: \$(FINAL_RENAME)
 	 echo \"`date` \$\$JOB run.SNPcalling.\$\$SHORT.sh\" >> \$\@;\\
 	done;\\
 	printf \"\\nThe following jobs have been submitted to the queue (See SNP.todo.txt):\\n;\"\\
+	sleep 1s;
 	cat  \$\@;
 
 \$(FINAL_RENAME): \$(SCRIPTS)/rename_files.pl \$(RENAME_DIR) \$(HOME) $id_file

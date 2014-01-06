@@ -63,21 +63,24 @@ foreach my $file (@files){
   #1115_2368_85_GTTTCG_R1.fastq
   #1117_2368_212_GCCAAT_R2.fastq
   #flowcell214_lane6_pair1_GGCTAC.fastq
-  
+  print "$file\n" if $test; 
   my ($sample,$barcode,$pair);
 
-  if ($file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/){
-    ## cornell files
-    ($sample,$barcode,$pair) = $file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/;
-  }elsif($file =~ /(flowcell\d+_lane\d+)_pair(\d)_([ATCG]{6})\.fastq/){
+  if($file =~ /(flowcell\d+_lane\d+)_pair(\d)_([ATCG]{6})\.fastq/){
     ## UCR files
     $sample = $1 . "_" . $3;
-    ($sample,$barcode,$pair) = ($3,$2);
+    ($barcode,$pair) = ($3,$2);
+    print "UCR\n" if $test;
+  }
+  elsif ($file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/){
+    ## cornell files
+    ($sample,$barcode,$pair) = $file =~ /(\d+_\d+_.+_([ATCG]{6}))_(R\d)\.fastq/;
+    print "CORNELL\n" if $test;
   }
   print "($sample,$barcode,$pair)\n" if $test;
   if ($pair eq 'R1'){
     $pair = 1;
-  }else {
+  }elsif($pair eq 'R2') {
     $pair = 2;
   }
   if (exists $rename{$sample}){
