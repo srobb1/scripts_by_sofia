@@ -9,9 +9,9 @@ my $SAM = pop @sam_path;
 my ($lib) = $SAM =~ /(.+)\.sam/;
 
 open INSAM, $sam or die "Can't open $sam\n";
-open GOOD , ">goodPingHits.$lib.txt" or die "Can't open goodPingHits.$lib.txt for writing\n";
-open READS , ">goodPingHits.$lib.sam" or die "Can't open goodPingHits.$lib.sam for writing\n";
-#open BAD , ">notPingHits.txt" or die "Can't open notPingHits.txt for writing\n";
+open GOOD , ">goodTEHits.$lib.txt" or die "Can't open goodTEHits.$lib.txt for writing\n";
+open READS , ">goodTEHits.$lib.sam" or die "Can't open goodTEHits.$lib.sam for writing\n";
+#open BAD , ">notTEHits.txt" or die "Can't open notTEHits.txt for writing\n";
 
 my %pairs;
 my %refs;
@@ -114,56 +114,109 @@ foreach my $read (keys %pairs){
   }
   elsif ($starts[0] >= $ref_end and $starts[1] >= $ref_end){
     warn "BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print READS "\@CO BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print READS $pairs{$read}{first}{LINE},"\n";
-    print READS $pairs{$read}{second}{LINE},"\n\n";
+    #print READS "\@CO BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    #print READS $pairs{$read}{first}{LINE},"\n";
+    #print READS $pairs{$read}{second}{LINE},"\n\n";
   }
   elsif ($starts[0] <= $ref_start-$lens[0] and $starts[1]<=$ref_start-$lens[1]){
     warn "BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print READS "\@CO BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    print READS $pairs{$read}{first}{LINE},"\n";
-    print READS $pairs{$read}{second}{LINE},"\n\n";
+    #print READS "\@CO BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    #print READS $pairs{$read}{first}{LINE},"\n";
+    #print READS $pairs{$read}{second}{LINE},"\n\n";
   }
-  elsif (  ($starts[0] < ($ref_start-30) and ($starts[0]+$lens[0]) > ($ref_start+30)   ) and ($starts[1]>$ref_start and $starts[1] <= $ref_end) ){
+  elsif (  (($starts[0] < ($ref_start-30)) and ($starts[0]+$lens[0]) > ($ref_start+30)   ) and ($starts[1]>$ref_start and $starts[1] <= $ref_end) ){
     ## firstJunction, secondIn
-    my @cigar_M0 = $cigars[0]  =~ /(\d+)M/; 
+    my @cigar_M0 = $cigars[0]  =~ /(\d+)M/g; 
     my $cigar_M0;
     foreach my $M (@cigar_M0){
       $cigar_M0+=$M;
     }
-    my @cigar_M1 = $cigars[1]  =~ /(\d+)M/; 
+    my @cigar_M1 = $cigars[1]  =~ /(\d+)M/g; 
     my $cigar_M1;
     foreach my $M (@cigar_M1){
       $cigar_M1+=$M;
     }
-    if ($lens[0]*.9 > $cigar_M0 and $lens[1]*.9 > $cigar_M1){
-      #print GOOD "$sam\t$ref_first\tfirstJunction,secondIn\n";
-      print warn "firstJuctiion, secondIn: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      #print $pairs{$read}{first}{LINE},"\n";
-      #print $pairs{$read}{second}{LINE},"\n\n";
+    if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
+      print GOOD "$sam\t$ref_first\tfirstJunction,secondIn\n";
+      print READS "firstJuctiion, secondIn: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print $pairs{$read}{first}{LINE},"\n";
+      print $pairs{$read}{second}{LINE},"\n\n";
 
+    }else{
+      warn "Neither:almostJunctionCase1: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
     }
   }
   elsif (  ($starts[0] >= $ref_start and $starts[0] <= $ref_end-$lens[0]) and ($starts[1] <= ($ref_end-30) and ($starts[1]+$lens[1]) >= ($ref_end+30))){
     ## firstIn, secondJunction
-    my @cigar_M0 = $cigars[0]  =~ /(\d+)M/; 
+    my @cigar_M0 = $cigars[0]  =~ /(\d+)M/g; 
     my $cigar_M0;
     foreach my $M (@cigar_M0){
       $cigar_M0+=$M;
     }
-    my @cigar_M1 = $cigars[1]  =~ /(\d+)M/; 
+    my @cigar_M1 = $cigars[1]  =~ /(\d+)M/g; 
     my $cigar_M1;
     foreach my $M (@cigar_M1){
       $cigar_M1+=$M;
     }
-    if ($lens[0]*.9 > $cigar_M0 and $lens[1]*.9 > $cigar_M1){
-      #print GOOD "$sam\t$ref_first\tfirstIn,secondJunction\n";
-      print warn "firstIN, secondJunction: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      #print $pairs{$read}{first}{LINE},"\n";
-      #print $pairs{$read}{second}{LINE},"\n\n";
-
+    if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
+      print GOOD "$sam\t$ref_first\tfirstIn,secondJunction\n";
+      print READS "firstIN, secondJunction: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      #print warn "firstIN, secondJunction: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print $pairs{$read}{first}{LINE},"\n";
+      print $pairs{$read}{second}{LINE},"\n\n";
+    }else{
+      warn "Neither:almostJunctionCase2: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
     }
   }
+  # firstSecondJunction, secondAfter
+  # -------[      ]-----
+  #             ---- -----
+  elsif( ($starts[0] <= ($ref_end - 30) and ($starts[0]+$lens[0] > $ref_end+30)) and ($starts[1] > $ref_end )){
+    my @cigar_M0 = $cigars[0]  =~ /(\d+)M/g;
+    my $cigar_M0;
+    foreach my $M (@cigar_M0){
+      $cigar_M0+=$M;
+    }
+    my @cigar_M1 = $cigars[1]  =~ /(\d+)M/g;
+    my $cigar_M1;
+    foreach my $M (@cigar_M1){
+      $cigar_M1+=$M;
+    }
+    if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
+      print GOOD "$sam\t$ref_first\tfirstIn,secondJunction\n";
+      #print warn "firstSecondJunction, secondAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print READS "firstSecondJunction, secondAfter: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print $pairs{$read}{first}{LINE},"\n";
+      print $pairs{$read}{second}{LINE},"\n\n";
+    }else{
+      warn "Neither:almostJunctionCase3: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    }
+  }
+  # firstBefore, secondJunction
+  # -------[      ]-----
+  # ---- -----
+  elsif ($starts[0] <= ($ref_start - $lens[0]) and ($starts[1] >= ($ref_start-30)) and (($starts[1]+$lens[1]) >= ($ref_start+30))  ){
+    my @cigar_M0 = $cigars[0]  =~ /(\d+)M/g;
+    my $cigar_M0;
+    foreach my $M (@cigar_M0){
+      $cigar_M0+=$M;
+    }
+    my @cigar_M1 = $cigars[1]  =~ /(\d+)M/g;
+    my $cigar_M1;
+    foreach my $M (@cigar_M1){
+      $cigar_M1+=$M;
+    }
+    if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
+      print GOOD "$sam\t$ref_first\tfirstIn,secondJunction\n";
+      #print warn "firstBefore, secondJunction: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print READS "firstBefore, secondJunction: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print $pairs{$read}{first}{LINE},"\n";
+      print $pairs{$read}{second}{LINE},"\n\n";
+    }else{
+      warn "Neither:almostJunctionCase4: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+    }
+  }
+ 
   else {
     warn "Neither: $starts[0]($lens[0]),$starts[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
   }
