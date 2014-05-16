@@ -3,19 +3,25 @@ use strict;
 use warnings;
 use Bio::SeqIO;
 
-### the $REF contains the value the individual you would like to use to replace the
-### original reference nucleotide
+### the $REF contains the name the individual in the VCF that you would like to use to replace the
+### original reference nucleotide in the fasta at the POS in the VCF
 
 my $VCF_tab = shift;
 my $genome = shift;
-my $REF = 'NB';
+my $REF = shift;
+if (!defined $REF){
+  $REF='NB';
+}
+if (!defined $VCF_tab and !defined $genome){
+  die "$0 vcf_file genome_fasta REF_ID  > new_genome_fasta\n";
+}
 my $seqIO_obj = Bio::SeqIO->new (-file=>$genome , -format=>'fasta');
 open VCFTAB , $VCF_tab or die "Can't Open $VCF_tab\n";
 
 chomp ( my $header = <VCFTAB> );
 ##CHROM  POS     REF     HEG4_0  HEG4_1  HEG4_2  HEG4_2-5kb      NB
 #Chr1    31071   A       G/G     G/G     G/G     G/G     A/A
-my ($one, $two, $three, @strains) =  split /\t/ , $header;
+my ($CHROMCOL, $POSCOL, $REFCOL, @strains) =  split /\t/ , $header;
 my $REF_i = '';
 for ( my $i=0 ; $i<@strains ; $i++){
   if ($strains[$i] eq $REF){

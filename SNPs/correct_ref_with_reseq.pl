@@ -4,9 +4,13 @@ use Data::Dumper;
 ## run 'cat file.vcf | vcf-to-tab > out.tab' before running this script
 
 my $vcf_tab = shift;
+my $ref_id = shift;
+if (!defined $ref_id){
+  $ref_id = 'NB';
+}
 open VCFTAB, "$vcf_tab" or die;
 
-
+## ref is NB
 ##CHROM  POS     REF     EG4_2   HEG4_2  NB
 #Chr1    1117    A       A/A     A/C    A/A
 chomp (my $header = <VCFTAB>);
@@ -16,7 +20,7 @@ shift @header;
 shift @header;
 my @strains = @header;
 my $strain_count = @strains;
-$header =~ s/\tNB//;
+$header =~ s/\t$ref_id//;
 print $header , "\n";
 while (my $line = <VCFTAB>){
   chomp $line;
@@ -24,17 +28,17 @@ while (my $line = <VCFTAB>){
   #print "$chr , $pos , $ref_nt , @snp\n";
   my $reseq_index;
   for (my $i=0 ; $i < $strain_count ; $i++){
-    if ( $header[$i] eq 'NB'){
+    if ( $header[$i] eq "$ref_id"){
       $reseq_index =  $i  ;
     }
   }
   my ($a1 , $a2) = $snp[$reseq_index] =~ /(.)\/(.)/;
-  #change ref if diff from reseq NB
+  #change ref if diff from reseq ref
   if ( ($a1 eq $a2) and ($a1 ne $ref_nt) and $a1 ne '.'){
     $ref_nt = $a1;
   }
-  #what should i do if reseq NB is het at a position
-  #throw out any lines that have reseq NB as heter
+  #what should i do if reseq ref-reseq is het at a position
+  #throw out any lines that have reseq ref as heter
   elsif ($a1 ne $a2){
     #move to next position, dont print this one    
     next;

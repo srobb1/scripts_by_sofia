@@ -60,7 +60,9 @@ foreach my $read (keys %pairs){
   
   ## one needs to be outside the ping,
   ## one needs to be inside the ping
-  ## ---flank------(ping)----flank---
+  ##  --------------[    TE     ]---------------
+  ##    -------       -------
+  ##                     -------       -------
   my $start_first = $pairs{$read}{first}{POS}; 
   my $start_second = $pairs{$read}{second}{POS}; 
   my $len_first = $pairs{$read}{first}{read_len}; 
@@ -79,13 +81,10 @@ foreach my $read (keys %pairs){
   my $ref_end = $ref_len - $flank;
   my $uniq_ref_start = $flank + $uniq_ping_s + 1;
   my $uniq_ref_end = $ref_len - $flank - $uniq_ping_e;
-  
-  #my $insertSize = $starts[1] - ($starts[0]+$lens[0]);
   my $insertSize = ($starts[1]+$lens[1]) - $starts[0];
   my $in_uniq = 'notUniq';
   if ($starts[0] <= $ref_start - $lens[0] and ( $starts[1] >= $ref_start and $starts[1] <= ($ref_end-$lens[1]))){
   ## if first is before ping, second should be inside
-    #print "first before, second in\n";
     $in_uniq = 'inUniq' if ($starts[1] >= $uniq_ref_start and $starts[1] <= $uniq_ref_end-$lens[1]);
     print GOOD "$sam\t$ref_first\tfirstBefore,secondIn($in_uniq)\tis:$insertSize\n";
     print READS "\@CO firstBefore, secondIn($in_uniq): $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
@@ -94,7 +93,6 @@ foreach my $read (keys %pairs){
     $ping_count{$ref_first}++;
   }elsif(( $starts[0] >= $ref_start and $starts[0] <= ($ref_end - $lens[0])) and $starts[1] >= $ref_end ) {
   ## if first is inside ping, second should be after
-    #print "first in, second after\n";
     $in_uniq = 'inUniq' if ($starts[0] >= $uniq_ref_start and $starts[0] <= $uniq_ref_end-$lens[0]);
     print GOOD "$sam\t$ref_first\tfirstIn($in_uniq),secondAfter\tis:$insertSize\n";
     print READS "\@CO firstIN, secondAfter($in_uniq): $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
@@ -105,24 +103,16 @@ foreach my $read (keys %pairs){
   }elsif($starts[0] >= $uniq_ref_start and $starts[0] <= ($uniq_ref_end-$lens[0]) and $starts[1] >= $uniq_ref_start and $starts[1] <= $uniq_ref_end-$lens[1]){
     next if $insertSize < 100; 
     warn "BothInsidePing: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end,uniqToPing:$uniq_ref_start..$uniq_ref_end\n";
-    #if ($lib =~ /NB/ and $ref_first =~ /NB/){
-      warn "$sam\t$ref_first\tbothInsidePing\tis:$insertSize\n";
-      push @bothInside, "\@CO BothInsidePing: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end,uniqToPing:$uniq_ref_start..$uniq_ref_end\n";
-      push @bothInside, $pairs{$read}{first}{LINE},"\n";
-      push @bothInside,  $pairs{$read}{second}{LINE},"\n";
-    #}
+    warn "$sam\t$ref_first\tbothInsidePing\tis:$insertSize\n";
+    push @bothInside, "\@CO BothInsidePing: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end,uniqToPing:$uniq_ref_start..$uniq_ref_end\n";
+    push @bothInside, $pairs{$read}{first}{LINE},"\n";
+    push @bothInside,  $pairs{$read}{second}{LINE},"\n";
   }
   elsif ($starts[0] >= $ref_end and $starts[1] >= $ref_end){
     warn "BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    #print READS "\@CO BothAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    #print READS $pairs{$read}{first}{LINE},"\n";
-    #print READS $pairs{$read}{second}{LINE},"\n\n";
   }
   elsif ($starts[0] <= $ref_start-$lens[0] and $starts[1]<=$ref_start-$lens[1]){
     warn "BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    #print READS "\@CO BothBefore: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-    #print READS $pairs{$read}{first}{LINE},"\n";
-    #print READS $pairs{$read}{second}{LINE},"\n\n";
   }
   elsif (  (($starts[0] < ($ref_start-30)) and ($starts[0]+$lens[0]) > ($ref_start+30)   ) and ($starts[1]>$ref_start and $starts[1] <= $ref_end) ){
     ## firstJunction, secondIn
@@ -138,9 +128,9 @@ foreach my $read (keys %pairs){
     }
     if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
       print GOOD "$sam\t$ref_first\tfirstJunction,secondIn\n";
-      print READS "firstJuctiion, secondIn: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      print $pairs{$read}{first}{LINE},"\n";
-      print $pairs{$read}{second}{LINE},"\n\n";
+      print READS "\@CO firstJunction, secondIn: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print READS $pairs{$read}{first}{LINE},"\n";
+      print READS $pairs{$read}{second}{LINE},"\n\n";
 
     }else{
       warn "Neither:almostJunctionCase1: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
@@ -160,10 +150,9 @@ foreach my $read (keys %pairs){
     }
     if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
       print GOOD "$sam\t$ref_first\tfirstIn,secondJunction\n";
-      print READS "firstIN, secondJunction: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      #print warn "firstIN, secondJunction: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      print $pairs{$read}{first}{LINE},"\n";
-      print $pairs{$read}{second}{LINE},"\n\n";
+      print READS "\@CO firstIN, secondJunction: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print READS $pairs{$read}{first}{LINE},"\n";
+      print READS $pairs{$read}{second}{LINE},"\n\n";
     }else{
       warn "Neither:almostJunctionCase2: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
     }
@@ -183,11 +172,10 @@ foreach my $read (keys %pairs){
       $cigar_M1+=$M;
     }
     if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
-      print GOOD "$sam\t$ref_first\tfirstIn,secondJunction\n";
-      #print warn "firstSecondJunction, secondAfter: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      print READS "firstSecondJunction, secondAfter: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      print $pairs{$read}{first}{LINE},"\n";
-      print $pairs{$read}{second}{LINE},"\n\n";
+      print GOOD "$sam\t$ref_first\tfirstSecondJunction,secondAfter\n";
+      print READS "\@CO firstSecondJunction, secondAfter: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print READS $pairs{$read}{first}{LINE},"\n";
+      print READS $pairs{$read}{second}{LINE},"\n\n";
     }else{
       warn "Neither:almostJunctionCase3: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
     }
@@ -207,11 +195,10 @@ foreach my $read (keys %pairs){
       $cigar_M1+=$M;
     }
     if ($lens[0]*.9 < $cigar_M0 and $lens[1]*.9 < $cigar_M1){
-      print GOOD "$sam\t$ref_first\tfirstIn,secondJunction\n";
-      #print warn "firstBefore, secondJunction: $starts[0]($lens[0]),$starts[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      print READS "firstBefore, secondJunction: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
-      print $pairs{$read}{first}{LINE},"\n";
-      print $pairs{$read}{second}{LINE},"\n\n";
+      print GOOD "$sam\t$ref_first\tfirstBefore,secondJunction\n";
+      print READS "\@CO firstBefore, secondJunction: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),is:$insertSize,$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
+      print READS $pairs{$read}{first}{LINE},"\n";
+      print READS $pairs{$read}{second}{LINE},"\n\n";
     }else{
       warn "Neither:almostJunctionCase4: $starts[0]:$cigars[0]($lens[0]),$starts[1]:$cigars[1]($lens[1]),$ref_first($refs{$ref_first}):$ref_start..$ref_end\n";
     }

@@ -5,9 +5,6 @@ use Data::Dumper;
 
 my $vcf_tab = shift;
 my $ref_id = shift;
-if (!defined $ref_id){
-  $ref_id = 'NB';
-}
 open VCFTAB, "$vcf_tab" or die;
 
 ## ref is NB
