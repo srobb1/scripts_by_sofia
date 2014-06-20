@@ -25,7 +25,9 @@ rsync -uL ~/bin/miscellaneous/* ~/src/scripts_by_sofia/miscellaneous/process_454
 rsync -uL ~/bin/process_454/* ~/src/scripts_by_sofia/process_454/.
 rsync -uL ~/bin/process_reads/* ~/src/scripts_by_sofia/process_reads/.
 rsync -uL ~/bin/utilities/* ~/src/scripts_by_sofia/utilities/.
-
+rsync -uL ~/bin/bisulfite/* ~/src/scripts_by_sofia/bisulfite/.
+rsync -uL ~/bin/bisulfite/mPingPrimers/* ~/src/scripts_by_sofia/bisulfite/mPingPrimers/.
+rm -f *~
 
 
 ##TEamRice

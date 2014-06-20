@@ -1,0 +1,52 @@
+#### these are teh gffs produced by relocate
+cat *mping.all_inserts.gff |  grep -v Reference-only > mping.inserts.gff
+cat *mping.all_inserts.gff |  grep  Reference-only > mping.ref_only.inserts.gff
+
+perl -pi -e 's/^(\S+\t(\S+).+ID=)/$1$2./' all.mping.inserts.gff
+perl -pi -e 's/^(\S+\t(\S+).+ID=)/$1$2./' all.pings.inserts.gff
+
+####robb@biocluster:~/project/bisulfide/forBrowser$ perl -pi -e 's/ID=ping/ID=mping/' mping.NB.inserts.gff
+##cat mping.NB.inserts.gff >> mping.inserts.gff
+
+
+## mping.relocate.out is the collection of all the RElocate confident_nonref.txt output of all the mping inserts 
+grep NB mping.relocate.out > NB.relocate.out
+perl reformat_relocate_2_gff.pl NB.relocate.out > mping.NB.inserts.gff
+
+perl combine_insert_gffs.pl mping.NB.inserts.gff mping.ref_only.inserts.gff > mping.Ref.gff
+
+cat mping.Ref.gff >> mping.inserts.gff
+
+perl reformat_relocate_2_gff.pl pings.relocate.out > pings.inserts.gff
+##manually add in Names
+
+## otherTEs
+cat /rhome/robb/rice/TE_success/otherTEs/Rv3/11282013_0.1M_*/*/results/*gff | grep Non-reference > otherTEs.nonRef.gff
+cat /rhome/robb/rice/TE_success/otherTEs/Rv3/11282013_0.1M_*/*/results/*gff | grep -v Non-reference > otherTEs.redundantRef.gff
+cat /rhome/robb/rice/RILs/otherTEs/12202013_0.1M_RIL*/*/results/*gff | grep Non-reference > RILs.otherTEs.nonRef.gff
+cat /rhome/robb/rice/RILs/otherTEs/12202013_0.1M_RIL*/*/results/*gff | grep -v Non-reference > RILs.otherTEs.redundantRef.gff
+cat RILs.otherTEs.nonRef.gff otherTEs.nonRef.gff > all.otherTEs.nonRef.gff
+cat RILs.otherTEs.redundantRef.gff otherTEs.redundantRef.gff > all.otherTEs.redundantRef.gff
+perl combine_insert_gffs.pl all.otherTEs.redundantRef.gff > all.otherTEs.Ref.gff
+perl -pi -e 's/^(\S+\t(\S+).+ID=)/$1$2./' all.otherTEs.nonRef.gff
+perl -pi -e 's/^(\S+\t(\S+).+ID=)/$1$2./' all.otherTEs.Ref.gff
+
+
+
+## otherDANTEs
+cat /rhome/robb/rice/TE_success/otherDNATEs/07312013_*/*/results/*gff | grep Non-reference > otherDNATEs.nonRef.gff
+cat /rhome/robb/rice/TE_success/otherDNATEs/07312013_*/*/results/*gff | grep -v Non-reference > otherDNATEs.redundantRef.gff
+cat /rhome/robb/rice/RILs/otherDNATEs/12202013_0.1M_RIL*/*/results/*gff | grep Non-reference > RILs.otherDNATEs.nonRef.gff
+cat /rhome/robb/rice/RILs/otherDNATEs/12202013_0.1M_RIL*/*/results/*gff | grep -v Non-reference > RILs.otherDNATEs.redundantRef.gff
+cat RILs.otherDNATEs.nonRef.gff otherDNATEs.nonRef.gff > all.otherDNATEs.nonRef.gff
+cat RILs.otherDNATEs.redundantRef.gff otherDNATEs.redundantRef.gff > all.otherDNATEs.redundantRef.gff
+perl combine_insert_gffs.pl all.otherDNATEs.redundantRef.gff > all.otherDNATEs.Ref.gff
+perl -pi -e 's/^(\S+\t(\S+).+ID=)/$1$2./' all.otherDNATEs.Ref.gff
+perl -pi -e 's/^(\S+\t(\S+).+ID=)/$1$2./' all.otherDNATEs.nonRef.gff
+
+
+
+#~/project/bisulfide/forBrowser/inserts_near_genes$ bp_seqfeature_load -a DBI::SQLite -d rice.sqlite -f ../final/mping.inserts.gff ../final/otherDNATEs.Ref.gff ../final/otherDNATEs.nonRef.gff ../final/otherTEs.Ref.gff ../final/otherTEs.nonRef.gff ../final/pings.inserts.gff
+cp /rhome/robb/rice/database/backup_sqlite_db/MSUr7.all.annotations.sqlite rice.sqlite
+ bp_seqfeature_load -a DBI::SQLite -d rice.sqlite -f ../final/mping.inserts.gff ../final/all.otherTEs.Ref.gff ../final/all.otherTEs.nonRef.gff ../final/pings.inserts.gff
+bp_seqfeature_load -a DBI::SQLite -d rice.sqlite -f ../final/all.otherDNATEs.Ref.gff ../final/all.otherDNATEs.nonRef.gff 
