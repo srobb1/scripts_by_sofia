@@ -5,7 +5,7 @@ use Data::Dumper;
 my $methyl_file = shift;
 my %methy;
 if ( !-e "$methyl_file.sorted" and $methyl_file !~ /sorted$/ ) {
-  system("sort -k3 $methyl_file > $methyl_file.sorted");
+  system("sort -k3 $methyl_file | grep -v Bismark > $methyl_file.sorted");
   $methyl_file = "$methyl_file.sorted";
 }
 open IN, $methyl_file or die "Can't open $methyl_file";
