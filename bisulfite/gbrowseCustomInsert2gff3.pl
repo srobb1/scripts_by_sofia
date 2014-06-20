@@ -1,0 +1,16 @@
+#!/usr/bin/perl -w
+use strict;
+
+my $file = shift;
+
+open IN, $file or die "cant open $file\n";
+my $i;
+while (my $line = <IN>){
+  chomp $line;
+  $i++;
+  #primers	LOC_Os01g66970(419)	Chr1:38895496..38895527,38895887..38895914
+  my ($type, $name, $range) =split /\s+/ , $line;
+  my ($ref,$s1,$e1) = $range =~ /(\w+):(\d+)\.\.(\d+)/;
+  my $ID="Insert.$i.$ref.$s1.$e1";
+  print join("\t",$ref,'.','transposable_element_insertion_site',$s1,$e1,'.','.','.',"ID=$ID;Name=$name"),"\n";
+}

@@ -1,0 +1,5 @@
+run create any insert:
+perl create_any_complete_site_with_flanking.pl ../genome/all/MSU_r7.all.fa ping.fa pings.relocate.out 600 > pings.ref.fa 
+
+then:
+perl add_good_ping_name_to_gff.pl pings.relocate.out.gff > ../genome/pings.ref.gff
