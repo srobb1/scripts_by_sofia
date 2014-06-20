@@ -1,0 +1,227 @@
+#PBS -l nodes=1;ppn=8
+GENOME=$1
+FQ_1=$2
+FQ_2=$3
+BASE=$4
+knownSites=$5
+CWD=$6
+
+if [ $# -eq 0 ] # same effect as:  if [ -z "$1" ]
+# $1 can exist, but be empty:  zmore "" arg2 arg3
+then
+  echo "Usage: `basename $0` GenomeFilePath FQ_1 FQ_2 SampleShortName VCFofKnownSites WorkingDir" >&2
+  exit 1 
+fi 
+
+
+cd $CWD
+
+# include some programs in our path on the biocluster system (would be different on other systems)
+#module load bwa/0.6.2
+module load samtools/0.1.18-r580
+module load GATK
+module load picard
+module load sickle
+module load bwa/0.6.2
+module load java/1.7.0_11
+# index the genome for alignment
+if [ ! -f $GENOME.bwt ]; then
+ bwa index -a bwtsw $GENOME
+fi
+
+
+if [ ! -d clean_fq ]; then
+  mkdir $CWD/clean_fq
+fi
+
+CLEAN_1=$CWD/clean_fq/"$BASE"_p1.fq
+CLEAN_2=$CWD/clean_fq/"$BASE"_p2.fq
+CLEAN_U=$CWD/clean_fq/"$BASE"_unpaired.fq
+
+# trim some reads before processing
+if [ ! -f $CLEAN_1 ]; then
+ sickle pe -f $FQ_1 -r $FQ_2 -o $CLEAN_1 -p $CLEAN_2 -s $CLEAN_U -t sanger -q 20 -l 50
+ echo "sickle pe -f $FQ_1 -r $FQ_2 -o $CLEAN_1 -p $CLEAN_2 -s $CLEAN_U -t sanger -q 20 -l 50"
+fi
+
+# aln to genome
+if [ ! -f $BASE.sam ]; then
+ echo "bwa aln -t 8 -q 20 $GENOME $CLEAN_1 > ${BASE}_p1.sai" 
+ bwa aln -t 8 -q 20 $GENOME $CLEAN_1 > "$BASE"_p1.sai 
+ echo "bwa aln -t 8 -q 20 $GENOME $CLEAN_2 > "$BASE"_p2.sai"
+ bwa aln -t 8 -q 20 $GENOME $CLEAN_2 > "$BASE"_p2.sai
+ echo "bwa sampe $GENOME "$BASE"_p1.sai "$BASE"_p2.sai  $CLEAN_1 $CLEAN_2 | samtools view -Sb - -o $BASE.bam" 
+ bwa sampe $GENOME "$BASE"_p1.sai "$BASE"_p2.sai  $CLEAN_1 $CLEAN_2 > $BASE.sam #| samtools view -Sb - -o $BASE.bam 
+ #samtools index $BASE.bam
+fi
+
+##
+## http://www.broadinstitute.org/gatk/guide/topic?name=best-practices
+## Best: multi-sample realignment with known sites and recalibration
+##
+## for each sample
+##    lanes.bam <- merged lane.bams for sample
+##    dedup.bam <- MarkDuplicates(lanes.bam)
+##    realigned.bam <- realign(dedup.bam) [with known sites included if available]
+##    recal.bam <- recal(realigned.bam)
+##    sample.bam <- recal.bam
+##
+##
+
+#make the SAM file, then the BAM file as a sorted file
+if [ ! -f $BASE.bam ]; then
+ # now sort: ask for 3gb of memory in case this is big datafile
+ echo "Sorting: with Picard's SortSam.jar"
+ java -Xmx3g -jar $PICARD/SortSam.jar I=$BASE.sam O=$BASE.bam SORT_ORDER=coordinate VALIDATION_STRINGENCY=SILENT CREATE_INDEX=TRUE
+ echo "Getting Stats: with samtools flagstat"
+ samtools flagstat $BASE.bam > $BASE.flagstat
+fi
+
+# Mark duplicate reads (usually where the forward and reverse are identical, indicating a
+# PCR bias
+if [ ! -f $BASE.dedup.bam ]; then
+echo "marking duplicates with Picard's MarkDuplicates.jar"
+java -Xmx2g -jar $PICARD/MarkDuplicates.jar I=$BASE.bam \
+  O=$BASE.dedup.bam METRICS_FILE=$BASE.dedup.metrics \
+  CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT
+ echo "Getting Stats: with samtools flagstat"
+ samtools flagstat $BASE.dedup.bam > $BASE.dedup.flagstat
+fi
+
+# Fix the ReadGroups - required by GATK
+# right now the read groups aren't set in the depdup.bam file
+if [ ! -f $BASE.RG.bam ]; then
+echo "fixing read groups with Picard's AddOrReplaceReadGroups.jar"
+ java -Xmx2g -jar $PICARD/AddOrReplaceReadGroups.jar I=$BASE.dedup.bam O=$BASE.RG.bam \
+  SORT_ORDER=coordinate CREATE_INDEX=TRUE \
+   RGID=$BASE RGLB=$BASE RGPL=Illumina RGPU=Genomic RGSM=$BASE \
+   VALIDATION_STRINGENCY=SILENT
+fi
+
+# Identify where the variants are to realign around these
+# this includes Indels
+if [ ! -f $BASE.intervals ]; then
+echo "running GATK's RealignerTargetCreator"
+ java -Xmx2g -jar $GATK -T RealignerTargetCreator \
+ -R $GENOME \
+ -o $BASE.intervals \
+ -I $BASE.RG.bam \
+ --known $knownSites
+fi
+
+# realign the BAM file based on the intervals where there are polymorphism
+if [ ! -f $BASE.realign.bam ]; then
+ echo "Running GATK's IndelRealigner"
+ java -Xmx2g -jar $GATK -T IndelRealigner \
+  -R $GENOME \
+  -targetIntervals $BASE.intervals -I $BASE.RG.bam -o $BASE.realign.bam
+fi
+
+
+##
+##  recal.bam <- recal(realigned.bam)
+##
+
+## recalibrate the quality scores based on known sites
+if [ ! -f $BASE.recal_data.grp ] ; then 
+ echo "Running GATK's BaseRecalibrator"
+ java -Xmx4g -jar $GATK \
+ -T BaseRecalibrator \
+ -I $BASE.realign.bam \
+ -R $GENOME \
+ -knownSites $knownSites \
+ -o $BASE.recal_data.grp 
+fi
+
+## print out new scores in a new recal.bam
+if [ ! -f $BASE.recal.bam ] ; then 
+echo "Running GATK's PrintReads to print out new scores after recalibration"
+java -Xmx4g -jar $GATK \
+   -T PrintReads \
+   -R $GENOME \
+   -I $BASE.realign.bam \
+   -BQSR $BASE.recal_data.grp \
+   -o $BASE.recal.bam
+fi
+
+
+# Call the SNPs from this BAM file generating a VCF file
+# using 4 threads (-nt 4) and only calling SNPs, INDELs could be call too
+# with the -glm BOTH or -glm INDEL
+
+if [ ! -f  $BASE.GATK.vcf ]; then
+echo "Running GATK's UnifiedGenotyper to call SNPs"
+java -Xmx3g -jar $GATK -T UnifiedGenotyper \
+  -glm SNP \
+  -I $BASE.recal.bam \
+  -R $GENOME \
+  -o $BASE.GATK.vcf \
+  -nt 4 
+fi
+
+# run the filtering to mark low-quality SNPs
+# See this for more information on best practices
+# http://www.broadinstitute.org/gatk/guide/topic?name=best-practices
+if [ ! -f $BASE.GATK_filtered.vcf ]; then
+echo "Running GATK's VariantFiltration to find good SNPs"
+    java -Xmx3g -jar $GATK  \
+    -T VariantFiltration \
+    -o $BASE.GATK_filtered.vcf \
+    --variant $BASE.GATK.vcf \
+    -R $GENOME \
+    --clusterWindowSize 10 \
+    --filterExpression "QD<5.0"  --filterName QualByDepth \
+    --filterExpression "HRun>=4" --filterName HomopolymerRun \
+    --filterExpression "QUAL < 60"  --filterName QScore \
+    --filterExpression "MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)"  --filterName MapQual \
+    --filterExpression "FS > 60.0"  --filterName FisherStrandBias \
+    --filterExpression "HaplotypeScore > 13.0"   --filterName HaplotypeScore \
+    --filterExpression "MQRankSum < -12.5" --filterName MQRankSum \
+    --filterExpression "ReadPosRankSum < -8.0" --filterName ReadPosRankSum 
+fi
+
+# now only select the variants which are NOT filtered to be output
+if [ ! -f $BASE.GATK_selected.vcf ]; then
+echo "Running GATK's SelectVariants to select only good SNPs"
+ java -Xmx3g -jar $GATK \
+  -T SelectVariants \
+  -o $BASE.GATK_selected.vcf \
+  --variant $BASE.GATK_filtered.vcf \
+  -R $GENOME  \
+  --excludeFiltered 
+fi
+
+module load vcftools
+
+# run VCF tools to convert the filtered VCF file into tab-delimited
+# for some simple look at the SNPs
+# would also do other work with the VCF file in vcftools to look at summary statistics
+vcf-to-tab < $BASE.GATK_filtered.vcf > $BASE.GATK_filtered.SNPs.tab
+
+## clean up
+
+## clean up
+FILESIZE=$(stat -c%s "$BASE.genotype.vcf")
+if [[ $FILESIZE > 50 ]]; then
+  if [ -e trash ] ; then
+    mkdir trash
+  fi
+  echo "Cleaning up:
+Moving files to trash directroy.
+If you are happy will the final results all files in trash can be deleted"
+
+  mv $BASE.realign.bai trash
+  mv $BASE.realign.bam trash
+  mv $BASE.dedup.metrics trash
+  mv $BASE.dedup.bai trash
+  mv $BASE.dedup.bam trash
+  mv $BASE.recal_data.grp trash
+  mv $BASE.bam trash
+  mv $BASE.bai trash
+  mv $BASE.sam trash
+  mv $BASE.intervals trash
+  mv ${BASE}_p2.sai trash
+  mv ${BASE}_p1.sai trash
+  mv $BASE.RG.bai trash
+  mv $BASE.RG.bam trash
+fi

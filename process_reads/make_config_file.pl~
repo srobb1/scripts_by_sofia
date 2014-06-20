@@ -1,0 +1,69 @@
+#!/usr/bin/perl -w
+use strict;
+use Getopt::Long;
+use File::Spec;
+
+my $current     = File::Spec->curdir();
+my $current_dir = File::Spec->rel2abs($current);
+
+if ( !defined @ARGV ) {
+  &getHelp();
+}
+my $DESTINATION_DIR;
+my $FASTQ_DIR;
+my $BARCODE_SAMPLE_FILE;
+my $QUEUE;
+
+
+GetOptions(
+  'o|output_dir:s' 	=> \$DESTINATION_DIR,
+  'f|fastq_dir:s' 	=> \$FASTQ_DIR,
+  'i|barcode_sample:s' 	=> \$BARCODE_SAMPLE_FILE,
+  'q|qsub_q:s' 		=> \$QUEUE,
+  'h|help' => \&getHelp,
+);
+
+sub getHelp {
+  print ' 
+Assistants in creating the config file for makefile to process reads for genotyping.
+
+usage: $0 -o output_dir -f fastq_dir -i barcode_sample_id_file -q qsub_q -h this message
+
+  o|output_dir:s      	=> name of directory for all outputed directories and files
+  f|fastq_dir:s       	=> name of directory of fastq files to be processed
+  i|barcode_sample:s  	=> name of file with Sample_names and illumina barcode ids
+  q|qsub_q:s          	=> name of qsub queue in which you want to submit, if a queue is available
+  h|help 		=> this message
+
+';
+  exit 1;
+}
+
+my @config;
+push @config, $current_dir;
+
+if ( defined $DESTINATION_DIR and -e $DESTINATION_DIR ){
+  push @config, File::Spec->rel2abs($DESTINATION_DIR);
+}else {
+  print "Please provide the directory for output. $DESTINATION_DIR is not valid or does not exist\n";
+  getHelp();
+}
+
+if ( defined $FASTQ_DIR and -e $FASTQ_DIR ){
+  push @config, File::Spec->rel2abs($FASTQ_DIR);
+}else {
+  print "Please provide the directory in which your FASTQ files can be found. $FASTQ_DIR is not valid\n";
+  getHelp();
+}
+
+if ( defined $BARCODE_SAMPLE_FILE and -e $BARCODE_SAMPLE_FILE ){
+  push @config, File::Spec->rel2abs($BARCODE_SAMPLE_FILE);
+}else {
+  print "Please provide the path to the file of Sample names and Illumina barcode IDs. $BARCODE_SAMPLE_FILE is not valid or does not exist\n";
+  getHelp();
+}
+open CONFIG, ">$current_dir/process_reads.config" or die "Can't open $current_dir/process_reads.config for writing $!\n";
+
+## @config=(cwd,output_dir,fastq_dir,barcode_file);
+print CONFIG join ("\n" , @config) , "\n";
+

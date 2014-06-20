@@ -1,0 +1,32 @@
+use Getopt::Long;
+
+
+my $sam_file;
+my $sam_dir;
+my $current     = File::Spec->curdir();
+my $current_dir = File::Spec->rel2abs($current);
+my $out_dir     = "$current_dir/split_by_target";
+
+##takes a sam file and splits it into separate files based on the
+##targets sequences.
+
+GetOptions(
+    's|sam:s' => \$sam_file,
+    'd|dir:s' => \$sam_dir,
+    'o|out:s' => \$out_dir,
+    'h|help'  => \&getHelp,
+);
+
+sub getHelp () {
+    print "
+usage:
+./splitSam_byTarget.pl [-d sam_directory] [-s sam file] [-o out_directory][-h] 
+
+options:
+-s STR          sam file [no default]
+-d STR          directory of sam files [no default]
+-o STR          directory for the new sam files [current_dir/split_by_target]
+-h              this message
+";
+    exit 1;
+}

@@ -1,0 +1,18 @@
+this script will go thru each entry in the sample/illumina_barcode_id file (see below for file format)
+and rename the flowcell193_lane5_pair1_ATCACG.fastq formatted files to this format: RIL13_0_TTAGGC_FC193L5_p2.fq
+it will then create shell scripts which get submitted to the queue for trimming and genotyping
+
+####### sample_barcodeID_file format: #######
+cat FC193_RIL_12-16_43/name_illumina_id.txt
+RIL12_0 27
+RIL13_0 3
+RIL16_0 22
+
+to genotype a directory of fastq files, in which each fastq is a separate sample:
+
+usage:
+make_makefile.pl -o output_dir -f fastq_dir -i sample_barcodeID_file -q "qsub options"
+
+example:
+make_makefile.pl -o ../Illumina/ -f . -i name_illumina_id.txt -q "-q highmem -l nodes=1:ppn=8"
+make
