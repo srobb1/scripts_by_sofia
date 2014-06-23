@@ -34,9 +34,9 @@ foreach my $loc (sort keys %meth){
       $general_loc =~ s/empty\.//;
     } 
     my @row = ($general_loc,$empty,$pos);
+    my ($CHH,$chh,$CHH_per,  $CHG,$chg,$CHG_per, $CpG,$cpg,$CpG_per) = ('-','-','-','-','-','-','-','-','-');
     #my ($CHH,$chh,$CHH_per,  $CHG,$chg,$CHG_per, $CpG,$cpg,$CpG_per) = ('','','','','','','','','');
     foreach my $strain (sort keys %strains){
-      my ($CHH,$chh,$CHH_per,  $CHG,$chg,$CHG_per, $CpG,$cpg,$CpG_per) = ('-','-','-','-','-','-','-','-','-');
       if (exists $meth{$loc}{$pos}{CHH}{$strain}){
         $CHH =  $meth{$loc}{$pos}{CHH}{$strain}{meth}; 
         $chh =  $meth{$loc}{$pos}{CHH}{$strain}{nometh}; 
